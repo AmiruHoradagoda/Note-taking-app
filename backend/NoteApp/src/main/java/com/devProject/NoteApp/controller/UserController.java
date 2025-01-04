@@ -1,6 +1,7 @@
 package com.devProject.NoteApp.controller;
 
-import com.devProject.NoteApp.model.User;
+
+import com.devProject.NoteApp.model.Users;
 import com.devProject.NoteApp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -14,27 +15,27 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<Users> getAllUsers() {
         return userService.getAllUsers();
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable String id) {
+    public Users getUserById(@PathVariable int id) {
         return userService.getUserById(id);
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
+    public Users createUser(@RequestBody Users user) {
         return userService.createUser(user);
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable String id, @RequestBody User user) {
+    public Users updateUser(@PathVariable int id, @RequestBody Users user) {
         return userService.updateUser(id, user);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable String id) {
+    public void deleteUser(@PathVariable int id) {
         userService.deleteUser(id);
     }
 }
