@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import com.devProject.NoteApp.model.Users;
 
 @Repository
-public interface UserRepo extends MongoRepository<Users, Integer> {
+public interface UserRepo extends MongoRepository<Users, String> {
 
     Users findByUsername(String username);
 }

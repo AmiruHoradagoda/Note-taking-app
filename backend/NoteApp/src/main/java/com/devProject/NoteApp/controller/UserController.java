@@ -10,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin
 public class UserController {
     @Autowired
     private UserService userService;
@@ -20,7 +21,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public Users getUserById(@PathVariable int id) {
+    public Users getUserById(@PathVariable String id) {
         return userService.getUserById(id);
     }
 
@@ -30,12 +31,12 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public Users updateUser(@PathVariable int id, @RequestBody Users user) {
+    public Users updateUser(@PathVariable String id, @RequestBody Users user) {
         return userService.updateUser(id, user);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable int id) {
+    public void deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
     }
 }

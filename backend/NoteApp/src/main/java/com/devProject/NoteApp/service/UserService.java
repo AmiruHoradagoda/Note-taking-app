@@ -27,28 +27,28 @@ public class UserService {
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-public AuthenticationResponse register(RegisterRequest request) {
-    Users user = new Users();
-    user.setUsername(request.getUsername());
-    user.setPassword(encoder.encode(request.getPassword()));
-    
-    try {
-        repo.save(user);
-        String token = jwtService.generateToken(user.getUsername());
-        return AuthenticationResponse.builder()
-                .token(token)
-                .message("User registered successfully")
-                .build();
-    } catch (Exception e) {
-        return AuthenticationResponse.builder()
-                .message("Registration failed")
-                .build();
+    public AuthenticationResponse register(RegisterRequest request) {
+        Users user = new Users();
+        user.setUsername(request.getUsername());
+        user.setPassword(encoder.encode(request.getPassword()));
+
+        try {
+            repo.save(user);
+            String token = jwtService.generateToken(user.getUsername());
+            return AuthenticationResponse.builder()
+                    .token(token)
+                    .message("User registered successfully")
+                    .build();
+        } catch (Exception e) {
+            return AuthenticationResponse.builder()
+                    .message("Registration failed")
+                    .build();
+        }
     }
-}
 
     public AuthenticationResponse verify(Users user) {
-          Authentication authentication = authManager.authenticate(
-            new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
+        Authentication authentication = authManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
         );
         if (authentication.isAuthenticated()) {
             String token = jwtService.generateToken(user.getUsername());
@@ -66,7 +66,7 @@ public AuthenticationResponse register(RegisterRequest request) {
         return repo.findAll();
     }
 
-    public Users getUserById(int id) {
+    public Users getUserById(String id) {
         return repo.findById(id).orElse(null);
     }
 
@@ -74,12 +74,12 @@ public AuthenticationResponse register(RegisterRequest request) {
         return repo.save(user);
     }
 
-    public Users updateUser(int id, Users user) {
+    public Users updateUser(String id, Users user) {
         user.setId(id);
         return repo.save(user);
     }
 
-    public void deleteUser(int id) {
+    public void deleteUser(String id) {
         repo.deleteById(id);
     }
 }
