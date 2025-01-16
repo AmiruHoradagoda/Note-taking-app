@@ -41,4 +41,8 @@ public class NoteService {
     public void deleteNote(String id) {
         noteRepository.deleteById(id);
     }
+
+    public List<Note> getNoteBySearch(String searchTxt) {
+        return noteRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(searchTxt, searchTxt);
+    }
 }

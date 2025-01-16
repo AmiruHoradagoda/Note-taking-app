@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/notes")
+@CrossOrigin
 public class NoteController {
     @Autowired
     private NoteService noteService;
@@ -26,6 +27,11 @@ public class NoteController {
     @GetMapping("/{id}")
     public Note getNoteById(@PathVariable String id) {
         return noteService.getNoteById(id);
+    }
+
+    @GetMapping("/search")
+    public List<Note> getNoteBySearch(@RequestParam String searchTxt) {
+        return noteService.getNoteBySearch(searchTxt);
     }
 
     @PostMapping

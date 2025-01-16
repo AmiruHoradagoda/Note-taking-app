@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface NoteRepository extends MongoRepository<Note, String> {
     List<Note> findByUserId(String userId);
+    List<Note> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(String title, String content);
 }
