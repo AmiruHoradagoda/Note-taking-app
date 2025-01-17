@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 
-const MainContent = () => {
+const MainContent = ({ searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -8,17 +9,14 @@ const MainContent = () => {
   const [newNote, setNewNote] = useState({
     title: "",
     content: "",
-    labels: [],
-    color: "#ffffff",
-    isArchived: false,
-    isPinned: false,
+    userId: "",
   });
 
   const fetchNotes = async () => {
     try {
-      const userId = localStorage.getItem("userId"); // Assuming you store userId after login
+      const userId = localStorage.getItem("userId");
       const response = await fetch(
-        `http://localhost:8080/api/notes/user/${userId}`
+        `http://localhost:8080/api/v1/notes/user/${userId}`
       );
       if (!response.ok) throw new Error("Failed to fetch notes");
       const data = await response.json();
@@ -34,17 +32,26 @@ const MainContent = () => {
     fetchNotes();
   }, []);
 
+  useEffect(() => {
+    if (searchResults) {
+      setNotes(searchResults);
+    } else {
+      fetchNotes();
+    }
+  }, [searchResults]);
+
   const handleCreateNote = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:8080/api/notes", {
+      const userId = localStorage.getItem("userId");
+      const response = await fetch("http://localhost:8080/api/v1/notes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...newNote,
-          userId: localStorage.getItem("userId"),
+          userId,
         }),
       });
       if (!response.ok) throw new Error("Failed to create note");
@@ -53,10 +60,7 @@ const MainContent = () => {
       setNewNote({
         title: "",
         content: "",
-        labels: [],
-        color: "#ffffff",
-        isArchived: false,
-        isPinned: false,
+        userId: "",
       });
     } catch (err) {
       setError("Failed to create note");
@@ -66,7 +70,7 @@ const MainContent = () => {
   const handleUpdateNote = async (noteId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/notes/${noteId}`,
+        `http://localhost:8080/api/v1/notes/${noteId}`,
         {
           method: "PUT",
           headers: {
@@ -89,7 +93,7 @@ const MainContent = () => {
   const handleDeleteNote = async (noteId) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/notes/${noteId}`,
+        `http://localhost:8080/api/v1/notes/${noteId}`,
         {
           method: "DELETE",
         }
@@ -160,8 +164,7 @@ const MainContent = () => {
         {notes.map((note) => (
           <div
             key={note.id}
-            className="p-4 bg-white rounded-lg shadow-md"
-            style={{ backgroundColor: note.color }}
+            className="relative p-4 transition-shadow bg-white rounded-lg shadow-md hover:shadow-lg"
           >
             {editingNote?.id === note.id ? (
               <form
@@ -211,21 +214,28 @@ const MainContent = () => {
               </form>
             ) : (
               <>
-                <h3 className="mb-2 font-semibold">{note.title}</h3>
-                <p className="text-sm text-gray-600">{note.content}</p>
-                <div className="flex justify-end mt-4 space-x-2">
-                  <button
-                    onClick={() => setEditingNote(note)}
-                    className="p-1 rounded hover:bg-gray-100"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={() => handleDeleteNote(note.id)}
-                    className="p-1 rounded hover:bg-gray-100"
-                  >
-                    🗑️
-                  </button>
+                <h3 className="mb-2 text-lg font-semibold">{note.title}</h3>
+                <p className="mb-8 text-gray-600">{note.content}</p>
+                <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between p-4 rounded-b-lg bg-gray-50">
+                  <span className="text-xs text-gray-500">
+                    {new Date(note.createdAt).toLocaleDateString()}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setEditingNote(note)}
+                      className="p-2 text-gray-600 transition-colors rounded-full hover:text-yellow-600 hover:bg-gray-100"
+                      title="Edit note"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteNote(note.id)}
+                      className="p-2 text-gray-600 transition-colors rounded-full hover:text-red-600 hover:bg-gray-100"
+                      title="Delete note"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </>
             )}
