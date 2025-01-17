@@ -1,11 +1,11 @@
 package com.devProject.NoteApp.controller;
 
+import com.devProject.NoteApp.dto.requests.UserRequestDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 
-import com.devProject.NoteApp.dto.AuthenticationResponse;
-import com.devProject.NoteApp.dto.RegisterRequest;
-import com.devProject.NoteApp.model.Users;
+import com.devProject.NoteApp.dto.response.AuthenticationResponse;
+import com.devProject.NoteApp.dto.requests.RegisterRequest;
 import com.devProject.NoteApp.service.UserService;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
@@ -14,18 +14,24 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/auth/")
 @RequiredArgsConstructor
 public class AuthenticationController {
-        @Autowired
+
     private UserService userService;
 
+    @Autowired
+    public AuthenticationController(UserService userService) {
+        this.userService = userService;
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<AuthenticationResponse> register(@RequestBody  RegisterRequest request) {
-        return  ResponseEntity.ok(userService.register(request));
+    public ResponseEntity<AuthenticationResponse> register(@RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(userService.register(request));
 
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> login(@RequestBody Users user) {
+    public ResponseEntity<AuthenticationResponse> login(@RequestBody UserRequestDto user) {
 
-        return  ResponseEntity.ok(userService.verify(user));
+        return ResponseEntity.ok(userService.verify(user));
     }
+
 }

@@ -1,6 +1,6 @@
 package com.devProject.NoteApp.controller;
 
-
+import com.devProject.NoteApp.dto.response.UserResponseDto;
 import com.devProject.NoteApp.model.Users;
 import com.devProject.NoteApp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,29 +9,28 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
-@CrossOrigin
+@RequestMapping("/api/v1/users")
 public class UserController {
     @Autowired
     private UserService userService;
 
-    @GetMapping
-    public List<Users> getAllUsers() {
+    @GetMapping("/getAllUsers")
+    public List<UserResponseDto> getAllUsers() {
         return userService.getAllUsers();
     }
 
     @GetMapping("/{id}")
-    public Users getUserById(@PathVariable String id) {
+    public UserResponseDto getUserById(@PathVariable String id) {
         return userService.getUserById(id);
     }
 
     @PostMapping
-    public Users createUser(@RequestBody Users user) {
+    public UserResponseDto createUser(@RequestBody Users user) {
         return userService.createUser(user);
     }
 
     @PutMapping("/{id}")
-    public Users updateUser(@PathVariable String id, @RequestBody Users user) {
+    public UserResponseDto updateUser(@PathVariable String id, @RequestBody Users user) {
         return userService.updateUser(id, user);
     }
 

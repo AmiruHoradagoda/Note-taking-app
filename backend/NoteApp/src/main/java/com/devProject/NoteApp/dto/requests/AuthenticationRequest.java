@@ -1,4 +1,4 @@
-package com.devProject.NoteApp.dto;
+package com.devProject.NoteApp.dto.requests;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
