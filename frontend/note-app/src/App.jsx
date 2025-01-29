@@ -23,24 +23,31 @@ const App = () => {
     setIsAuthenticated(false);
   };
 
-  const handleSearch = async (userId, searchTxt) => {
-    if (!searchTxt.trim()) {
-      setSearchResults(null);
-      return;
-    }
+ const handleSearch = async (userId, searchTxt) => {
+   if (!searchTxt.trim()) {
+     setSearchResults(null);
+     return;
+   }
 
-    try {
-      const response = await fetch(
-        `/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data);
-      }
-    } catch (error) {
-      console.error("Search failed:", error);
-    }
-  };
+   try {
+     const response = await fetch(
+       `http://localhost:8080/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
+       {
+         headers: {
+           Authorization: `Bearer ${localStorage.getItem("token")}`,
+         },
+       }
+     );
+     if (response.ok) {
+       const data = await response.json();
+       setSearchResults(data);
+     } else {
+       console.error("Search failed with status:", response.status);
+     }
+   } catch (error) {
+     console.error("Search failed:", error);
+   }
+ };
 
   if (!isAuthenticated) {
     return (

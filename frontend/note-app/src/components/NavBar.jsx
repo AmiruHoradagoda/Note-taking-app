@@ -9,7 +9,14 @@ const NavBar = ({ onLogout, onSearch }) => {
       const userId = localStorage.getItem("userId");
       if (userId) {
         try {
-          const response = await fetch(`/api/v1/users/${userId}`);
+          const response = await fetch(
+            `http://localhost:8080/api/v1/users/${userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
@@ -26,23 +33,13 @@ const NavBar = ({ onLogout, onSearch }) => {
     const query = e.target.value;
     setSearchQuery(query);
     const userId = localStorage.getItem("userId");
-    onSearch(userId, query);
+    if (userId) {
+      onSearch(userId, query);
+    }
   };
 
-  const handleLogout = async () => {
-    try {
-      const username = user?.username;
-      if (username) {
-        await fetch(`/api/v1/auth/logout?username=${username}`, {
-          method: "POST",
-        });
-      }
-      localStorage.removeItem("userId");
-      localStorage.removeItem("token");
-      onLogout();
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+  const handleLogout = () => {
+    onLogout();
   };
 
   return (
@@ -58,7 +55,11 @@ const NavBar = ({ onLogout, onSearch }) => {
         />
       </div>
       <div className="flex items-center gap-4">
-        <span className="text-sm font-medium">{user?.username}</span>
+        {user && (
+          <span className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-200 rounded">
+            {user.username}
+          </span>
+        )}
         <button
           onClick={handleLogout}
           className="px-3 py-1 text-sm text-white bg-yellow-500 rounded hover:bg-yellow-600"
