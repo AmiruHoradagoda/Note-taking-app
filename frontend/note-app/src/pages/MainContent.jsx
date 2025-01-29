@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import CreatableReactSelect from "react-select/creatable";
 
 const MainContent = ({ searchResults }) => {
   const [notes, setNotes] = useState([]);
@@ -124,18 +125,26 @@ const MainContent = ({ searchResults }) => {
       {/* Create Note Form */}
       <div className="p-4 mb-6 bg-white rounded-lg shadow-md">
         <form onSubmit={handleCreateNote} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Title"
-            value={newNote.title}
-            onChange={(e) =>
-              setNewNote((prev) => ({
-                ...prev,
-                title: e.target.value,
-              }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          />
+          <div className="flex gap-4">
+            <input
+              type="text"
+              placeholder="Title"
+              value={newNote.title}
+              onChange={(e) =>
+                setNewNote((prev) => ({
+                  ...prev,
+                  title: e.target.value,
+                }))
+              }
+              className="w-2/3 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+            <CreatableReactSelect
+              isMulti
+              className="w-1/3"
+              placeholder="Select Tags"
+            />
+          </div>
+
           <textarea
             placeholder="Take a note..."
             value={newNote.content}
