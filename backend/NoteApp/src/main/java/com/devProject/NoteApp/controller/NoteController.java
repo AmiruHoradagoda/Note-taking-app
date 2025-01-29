@@ -19,12 +19,6 @@ public class NoteController {
         this.noteService = noteService;
     }
 
-
-    @GetMapping("/{userId}")
-    public List<NoteResponseDto> getAllNotes(@PathVariable String userId) {
-        return noteService.getAllNotes(userId);
-    }
-
     @GetMapping("/user/{userId}")
     public List<NoteResponseDto> getNotesByUserId(@PathVariable String userId) {
         return noteService.getNotesByUserId(userId);

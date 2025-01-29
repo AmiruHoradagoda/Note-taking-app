@@ -25,13 +25,6 @@ public class NoteService {
         this.noteMapper = noteMapper;
     }
 
-    public List<NoteResponseDto> getAllNotes(String userId) {
-        return noteRepository.findByUserId(userId).stream()
-                .map(noteMapper::toNoteResponseDto)
-                .collect(Collectors.toList());
-    }
-
-
     public List<NoteResponseDto> getNotesByUserId(String userId) {
         return noteRepository.findByUserId(userId).stream()
                 .map(noteMapper::toNoteResponseDto)
