@@ -39,9 +39,11 @@ public class NoteService {
     public NoteResponseDto createNote(NoteRequestDto note) {
         Note savedNote = noteMapper.toNote(note);
         savedNote.setCreatedAt(LocalDateTime.now());
+        savedNote.setTags(note.getTags()); //madhawa
         noteRepository.save(savedNote);
         return noteMapper.toNoteResponseDto(savedNote);
     }
+
 
     public NoteResponseDto updateNote(String id, NoteRequestDto noteRequestDto) {
         // Check if the note exists
@@ -51,6 +53,7 @@ public class NoteService {
         existingNote.setTitle(noteRequestDto.getTitle());
         existingNote.setContent(noteRequestDto.getContent());
         existingNote.setCreatedAt(LocalDateTime.now());
+        existingNote.setTags(noteRequestDto.getTags());
 
         // Save the updated note
         Note updatedNote = noteRepository.save(existingNote);

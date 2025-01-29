@@ -1,10 +1,35 @@
 import React, { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import CreatableReactSelect from "react-select/creatable";
+
+// Utility function to generate a color based on the tag name
+const generateTagColor = (tag) => {
+  const colors = [
+    "bg-red-500",
+    "bg-blue-500",
+    "bg-green-500",
+    "bg-yellow-500",
+    "bg-purple-500",
+    "bg-pink-500",
+    "bg-teal-500",
+    "bg-indigo-500",
+    "bg-orange-500",
+    "bg-gray-500",
+  ];
+  // Generate a consistent index for the color based on the tag name
+  const index =
+    tag.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
+    colors.length;
+  return colors[index];
+};
 
 const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedNote, setEditedNote] = useState(note);
   const [error, setError] = useState("");
+  const [selectedTags, setSelectedTags] = useState(
+    note.tags.map((tag) => ({ label: tag, value: tag }))
+  );
 
   const handleUpdate = async () => {
     try {
@@ -20,6 +45,7 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
             title: editedNote.title,
             content: editedNote.content,
             userId: editedNote.userId,
+            tags: selectedTags.map((tag) => tag.value),
           }),
         }
       );
@@ -85,6 +111,14 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
           rows="3"
           placeholder="Note content..."
         />
+        <CreatableReactSelect
+          isMulti
+          className="w-full mb-2"
+          placeholder="Add Tags"
+          value={selectedTags}
+          onChange={setSelectedTags}
+          classNamePrefix="select"
+        />
         <div className="flex justify-end mt-2 space-x-2">
           <button
             onClick={() => setIsEditing(false)}
@@ -106,7 +140,25 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
-      <h4 className="text-lg font-bold">{note.title}</h4>
+      <div className="flex justify-between items-center">
+        <h4 className="text-lg font-bold">{note.title}</h4>
+        <div className="mt-2">
+          {note.tags && note.tags.length > 0 && (
+            <div className="flex gap-2">
+              {note.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className={`px-2 py-1 text-sm text-white rounded-full ${generateTagColor(
+                    tag
+                  )}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       <p className="mt-2 text-gray-600">{note.content}</p>
       <div className="flex justify-end mt-4 space-x-2">
         <button

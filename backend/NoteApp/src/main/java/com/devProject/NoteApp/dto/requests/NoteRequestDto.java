@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -15,4 +16,5 @@ public class NoteRequestDto {
     private String userId;
     private String title;
     private String content;
+    private List<String> tags; //madhawa
 }

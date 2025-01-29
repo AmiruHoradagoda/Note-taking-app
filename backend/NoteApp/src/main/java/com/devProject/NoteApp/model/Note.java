@@ -16,4 +16,5 @@ public class Note {
     private String title;
     private String content;
     private LocalDateTime createdAt = LocalDateTime.now();
+    private List<String> tags; //madhawa
 }
