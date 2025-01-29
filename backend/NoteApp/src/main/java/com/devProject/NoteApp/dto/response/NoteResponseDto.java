@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 public class NoteResponseDto {
+    private String id;
     private String userId;
     private String title;
     private String content;
