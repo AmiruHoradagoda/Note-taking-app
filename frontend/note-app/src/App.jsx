@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import NavBar from "./components/NavBar";
-import SideBar from "./components/SideBar";
 import MainContent from "./pages/MainContent";
 import AuthForms from "./pages/AuthForms";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
+  const [error, setError] = useState(null); // Add error state
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
+      // Optionally verify token expiration here or check if it's valid
       setIsAuthenticated(true);
     }
   }, []);
@@ -21,33 +22,35 @@ const App = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem("token"); // Clear token on logout
   };
 
- const handleSearch = async (userId, searchTxt) => {
-   if (!searchTxt.trim()) {
-     setSearchResults(null);
-     return;
-   }
+  const handleSearch = async (userId, searchTxt) => {
+    if (!searchTxt.trim()) {
+      setSearchResults(null);
+      return;
+    }
 
-   try {
-     const response = await fetch(
-       `http://localhost:8080/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
-       {
-         headers: {
-           Authorization: `Bearer ${localStorage.getItem("token")}`,
-         },
-       }
-     );
-     if (response.ok) {
-       const data = await response.json();
-       setSearchResults(data);
-     } else {
-       console.error("Search failed with status:", response.status);
-     }
-   } catch (error) {
-     console.error("Search failed:", error);
-   }
- };
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Search failed with status: " + response.status);
+      }
+      const data = await response.json();
+      setSearchResults(data);
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      setError("Search failed: " + error.message);
+      console.error("Search failed:", error);
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -62,8 +65,8 @@ const App = () => {
     <div className="flex flex-col min-h-screen">
       <NavBar onLogout={handleLogout} onSearch={handleSearch} />
       <div className="flex flex-1 pt-16">
-        <SideBar />
-        <main className="flex-1 p-4 transition-all duration-300 lg:ml-60">
+        <main className="flex-1 p-4 transition-all duration-300">
+          {error && <div className="text-red-600">{error}</div>}
           <MainContent searchResults={searchResults} />
         </main>
       </div>
