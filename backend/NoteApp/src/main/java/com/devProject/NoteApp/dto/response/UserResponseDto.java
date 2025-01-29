@@ -10,8 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class UserResponseDto {
-    private String token;
-    private String userId;
+    private String id;
     private String username;
-    private String message;
+    private String password;
 }
