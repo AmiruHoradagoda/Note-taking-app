@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import CreatableReactSelect from "react-select/creatable";
 import NoteComponent from "../components/NoteComponent";
 
@@ -22,7 +22,7 @@ const MainContent = ({ searchResults }) => {
     };
   };
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     try {
       const userId = localStorage.getItem("userId");
       if (!userId) {
@@ -60,11 +60,11 @@ const MainContent = ({ searchResults }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array since getAuthHeaders uses localStorage
 
   useEffect(() => {
     fetchNotes();
-  }, []);
+  }, [fetchNotes]);
 
   useEffect(() => {
     if (searchResults) {
@@ -80,7 +80,7 @@ const MainContent = ({ searchResults }) => {
     } else {
       fetchNotes();
     }
-  }, [searchResults]);
+  }, [searchResults, fetchNotes]);
 
   const handleCreateNote = async (e) => {
     e.preventDefault();

@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.devProject</groupId>
-    <artifactId>NoteApp</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>NoteApp</name>
+    <artifactId>NoteApp-Backend</artifactId>
+    <version>0.0.1</version>
+    <name>NoteApp-Backend</name>
     <description>Simple Note taking app</description>
     <url/>
     <licenses>
