@@ -9,6 +9,7 @@ const MainContent = ({ searchResults }) => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [newNote, setNewNote] = useState({
     title: "",
+    tags: "",
     content: "",
     userId: "",
   });
@@ -101,7 +102,7 @@ const MainContent = ({ searchResults }) => {
 
       const data = await response.json();
       setNotes((prev) => [...prev, data]);
-      setNewNote({ title: "", content: "", userId: "" });
+      setNewNote({ title: "", content: "", tags: [], userId: "" });
       setSelectedTags([]);
       setError("");
     } catch (err) {
@@ -157,7 +158,7 @@ const MainContent = ({ searchResults }) => {
               isMulti
               className="w-1/3"
               placeholder="Add Tags"
-              value={selectedTags}
+              value={selectedTags} // Should be selectedTags, not newNote.tags
               onChange={setSelectedTags}
               classNamePrefix="select"
             />
