@@ -30,7 +30,7 @@ const MainContent = ({ searchResults }) => {
       }
 
       const response = await fetch(
-        `http://localhost:8080/api/v1/notes/user/${userId}`,
+        `http://localhost:5050/api/v1/notes/user/${userId}`,
         {
           headers: getAuthHeaders(),
         }
@@ -86,7 +86,7 @@ const MainContent = ({ searchResults }) => {
     e.preventDefault();
     try {
       const userId = localStorage.getItem("userId");
-      const response = await fetch("http://localhost:8080/api/v1/notes", {
+      const response = await fetch("http://localhost:5050/api/v1/notes", {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({

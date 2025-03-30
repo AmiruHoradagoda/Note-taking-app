@@ -33,8 +33,8 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
 
     try {
       const endpoint = isLogin
-        ? "http://localhost:8080/api/v1/auth/login"
-        : "http://localhost:8080/api/v1/auth/register";
+        ? "http://localhost:5050/api/v1/auth/login"
+        : "http://localhost:5050/api/v1/auth/register";
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {

@@ -33,7 +33,7 @@ const App = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
+        `http://localhost:5050/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

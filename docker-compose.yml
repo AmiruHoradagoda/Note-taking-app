@@ -3,7 +3,7 @@ services:
     image: note-backend-image:v1
     container_name: note-backend-container
     ports:
-      - "8080:8080"
+      - "5050:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
 
@@ -16,6 +16,3 @@ services:
       - backend
     stdin_open: true
     tty: true
-
-volumes:
-  mongodb_data:

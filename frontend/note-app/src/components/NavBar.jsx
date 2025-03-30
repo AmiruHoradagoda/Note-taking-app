@@ -10,7 +10,7 @@ const NavBar = ({ onLogout, onSearch }) => {
       if (userId) {
         try {
           const response = await fetch(
-            `http://localhost:8080/api/v1/users/${userId}`,
+            `http://localhost:5050/api/v1/users/${userId}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
