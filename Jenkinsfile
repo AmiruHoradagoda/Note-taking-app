@@ -19,8 +19,8 @@ pipeline {
                         withCredentials([usernamePassword(credentialsId: 'notekeep-prod-database-credentials', usernameVariable: 'MONGODB_USERNAME', passwordVariable: 'MONGODB_PASSWORD')]) {
                             sh '''#!/bin/bash
                             echo "Building application with Mongodb database"
-                            export DB_USERNAME=$MONGODB_USERNAME
-                            export DB_PASSWORD=$MONGODB_PASSWORD
+                            export MONGODB_USERNAME=$MONGODB_USERNAME
+                            export MONGODB_PASSWORD=$MONGODB_PASSWORD
                             mvn clean package
                             '''
                         }
@@ -35,8 +35,8 @@ pipeline {
                     sh 'mvn test'
                 }
             }
-        }         
-}
+        }
+    }
     
     post {
         success {
