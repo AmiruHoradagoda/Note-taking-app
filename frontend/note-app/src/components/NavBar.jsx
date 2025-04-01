@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:8080/api/v1";
 const NavBar = ({ onLogout, onSearch }) => {
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -9,14 +10,11 @@ const NavBar = ({ onLogout, onSearch }) => {
       const userId = localStorage.getItem("userId");
       if (userId) {
         try {
-          const response = await fetch(
-            `http://localhost:8080/api/v1/users/${userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
+          const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          });
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);

@@ -3,7 +3,8 @@ import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import MainContent from "./pages/MainContent";
 import AuthForms from "./pages/AuthForms";
-
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
@@ -31,7 +32,7 @@ const App = () => {
 
    try {
      const response = await fetch(
-       `http://localhost:8080/api/v1/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
+       `${API_BASE_URL}/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
        {
          headers: {
            Authorization: `Bearer ${localStorage.getItem("token")}`,

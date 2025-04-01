@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Eye } from "lucide-react";
+const API_BASE_URL =process.env.REACT_APP_API_URL || "http://localhost:8080/api/v1";
 
 const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
+  
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,8 +35,8 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
 
     try {
       const endpoint = isLogin
-        ? "http://localhost:8080/api/v1/auth/login"
-        : "http://localhost:8080/api/v1/auth/register";
+        ? `${API_BASE_URL}/auth/login`
+        : `${API_BASE_URL}/auth/register`;
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {

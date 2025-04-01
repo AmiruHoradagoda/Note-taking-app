@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import CreatableReactSelect from "react-select/creatable";
-
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api/v1";
 // Utility function to generate a color based on the tag name
 const generateTagColor = (tag) => {
   const colors = [
@@ -33,22 +33,19 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
 
   const handleUpdate = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/v1/notes/${note.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            title: editedNote.title,
-            content: editedNote.content,
-            userId: editedNote.userId,
-            tags: selectedTags.map((tag) => tag.value),
-          }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/notes/${note.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          title: editedNote.title,
+          content: editedNote.content,
+          userId: editedNote.userId,
+          tags: selectedTags.map((tag) => tag.value),
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to update note");
@@ -67,15 +64,12 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this note?")) {
       try {
-        const response = await fetch(
-          `http://localhost:8080/api/v1/notes/${note.id}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/notes/${note.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to delete note");
@@ -140,7 +134,7 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <h4 className="text-lg font-bold">{note.title}</h4>
         <div className="mt-2">
           {note.tags && note.tags.length > 0 && (
