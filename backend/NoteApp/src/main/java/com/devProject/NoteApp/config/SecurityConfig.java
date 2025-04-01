@@ -30,9 +30,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         return http.csrf(customizer -> customizer.disable()).
-//                authorizeHttpRequests(auth -> auth
-//                        .anyRequest().permitAll()) // Allow all requests
-//                .build();
                 authorizeHttpRequests(request -> request
                         .requestMatchers(
                             "/api/v1/auth/**",
@@ -42,7 +39,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()).
-                httpBasic(Customizer.withDefaults()).
+                httpBasic(httpBasic -> httpBasic.disable()).
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
