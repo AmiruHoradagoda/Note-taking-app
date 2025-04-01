@@ -59,8 +59,8 @@ pipeline {
                     sh 'npm install --save-dev @babel/plugin-proposal-private-property-in-object'
                     sh 'npm install react-select' 
                     sh 'npm install'
-                    sh 'CI=false npm run build'
-                }
+                    sh 'REACT_APP_API_URL=https://app.amiru-web.xyz/api/v1 CI=false npm run build'
+            }
             }
         }
         stage('Docker Build and Push') {
@@ -105,7 +105,7 @@ pipeline {
                         docker pull ${DOCKER_IMAGE_FRONTEND}
                         # Start new containers
                         docker run -d --name ${DOCKER_CONTAINER_BACKEND} -p 8080:8080 ${DOCKER_IMAGE_BACKEND}
-                        docker run -d --name ${DOCKER_CONTAINER_FRONTEND} -p 3000:3000 ${DOCKER_IMAGE_FRONTEND}
+                        docker run -d --name ${DOCKER_CONTAINER_FRONTEND} -p 3000:80 ${DOCKER_IMAGE_FRONTEND}
                         '
                         """
                     }
