@@ -3,6 +3,7 @@ pipeline {
 
     tools {
         maven 'mvn-3.9.8'
+        nodejs 'node-22.12.0'
     }
     
     stages {
@@ -18,7 +19,7 @@ pipeline {
                     script {
                         withCredentials([usernamePassword(credentialsId: 'notekeep-prod-database-credentials', usernameVariable: 'MONGODB_USERNAME', passwordVariable: 'MONGODB_PASSWORD')]) {
                             sh '''#!/bin/bash
-                            echo "Building application with Mongodb database"
+                            echo "Building backend with Mongodb database"
                             export MONGODB_USERNAME=$MONGODB_USERNAME
                             export MONGODB_PASSWORD=$MONGODB_PASSWORD
                             mvn clean package
@@ -36,6 +37,19 @@ pipeline {
                 }
             }
         }
+        stage('Build Frontend') {
+            steps {
+                dir('frontend/note-app') {  
+                    echo "Building frontend"
+                    sh 'node -v'  
+                    sh 'npm -v'   
+                    sh 'npm install'
+                    sh 'npm run build'
+                }
+            }
+        }
+        
+
     }
     
     post {
