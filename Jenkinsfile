@@ -91,17 +91,36 @@ pipeline {
                 }
             }
         }
-        stage('Ansible Deploy') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]){
-                        withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", keyFileVariable: 'SSH_KEY')]){
-                        sh "ansible-playbook -i inventory.ini --private-key ${SSH_KEY} playbook.yml"
-                        }
-                    }
-                    }
-                    }
+       stage('Ansible Deploy') {
+        steps {
+            script {
+                withCredentials([
+                usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
+                                usernameVariable: 'DOCKER_USERNAME', 
+                                passwordVariable: 'DOCKER_PASSWORD'),
+                sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", 
+                                keyFileVariable: 'SSH_KEY')
+            ]){
+                // Use single quotes to avoid Groovy interpolation security issue
+                sh '''
+                    # Create a temporary inventory file with correct values
+                    echo "[ec2]" > temp_inventory.ini
+                    echo "dev-server ansible_host=ec2-100-25-81-92.compute-1.amazonaws.com" >> temp_inventory.ini
+                    echo "" >> temp_inventory.ini
+                    echo "[ec2:vars]" >> temp_inventory.ini
+                    echo "ansible_user=ubuntu" >> temp_inventory.ini
+                    echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> temp_inventory.ini
+                    
+                    # Run ansible-playbook with the temporary inventory
+                    ansible-playbook -i temp_inventory.ini --private-key $SSH_KEY playbook.yml
+                    
+                    # Clean up
+                    rm temp_inventory.ini
+                '''
+            }
         }
+    }
+}
     }
     
     post {
