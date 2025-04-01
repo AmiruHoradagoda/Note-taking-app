@@ -91,28 +91,16 @@ pipeline {
                 }
             }
         }
-        stage('Deploy') {
+        stage('Ansible Deploy') {
             steps {
                 script {
-                    withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", keyFileVariable: 'SSH_KEY')]) {
-                        sh """
-                        ssh -i \${SSH_KEY} -o StrictHostKeyChecking=no ${SSH_TARGET} '
-                        # Stop and remove existing containers
-                        docker stop ${DOCKER_CONTAINER_BACKEND} || true
-                        docker rm ${DOCKER_CONTAINER_BACKEND} || true
-                        docker stop ${DOCKER_CONTAINER_FRONTEND} || true
-                        docker rm ${DOCKER_CONTAINER_FRONTEND} || true
-                        # Pull latest images
-                        docker pull ${DOCKER_IMAGE_BACKEND}
-                        docker pull ${DOCKER_IMAGE_FRONTEND}
-                        # Start new containers
-                        docker run -d --name ${DOCKER_CONTAINER_BACKEND} -p 8080:8080 ${DOCKER_IMAGE_BACKEND}
-                        docker run -d --name ${DOCKER_CONTAINER_FRONTEND} -p 3000:80 ${DOCKER_IMAGE_FRONTEND}
-                        '
-                        """
+                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]){
+                        withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", keyFileVariable: 'SSH_KEY')]){
+                        sh "ansible-playbook -i inventory.ini --private-key ${SSH_KEY} playbook.yml"
+                        }
                     }
-                }
-            }
+                    }
+                    }
         }
     }
     

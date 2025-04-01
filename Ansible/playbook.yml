@@ -1,19 +1,54 @@
-- name: Deploy Note App
+---
+- name: Deploy Docker containers to EC2
   hosts: ec2
-  become: true
+  become: yes
+  
+  vars:
+    backend_container: "{{ lookup('env', 'DOCKER_CONTAINER_BACKEND') }}"
+    frontend_container: "{{ lookup('env', 'DOCKER_CONTAINER_FRONTEND') }}"
+    backend_image: "{{ lookup('env', 'DOCKER_IMAGE_BACKEND') }}"  
+    frontend_image: "{{ lookup('env', 'DOCKER_IMAGE_FRONTEND') }}"
+    backend_port: "8080"
+    frontend_port: "3000"
+  
   tasks:
+    - name: Log into DockerHub
+      docker_login:
+        username: "{{ lookup('env', 'DOCKER_USERNAME') }}"
+        password: "{{ lookup('env', 'DOCKER_PASSWORD') }}"
+        
+    - name: Stop and remove backend container
+      docker_container:
+        name: "{{ backend_container }}"
+        state: absent
+      
+    - name: Stop and remove frontend container  
+      docker_container:
+        name: "{{ frontend_container }}"
+        state: absent
+        
     - name: Pull latest backend image
-      command: docker pull madhawarathnayake/note-backend:latest
-
+      docker_image:
+        name: "{{ backend_image }}"
+        source: pull
+        
     - name: Pull latest frontend image
-      command: docker pull madhawarathnayake/note-frontend:latest
-
-    - name: Stop running containers
-      command: docker-compose down
-      args:
-        chdir: ../docker-compose.yml
-
-    - name: Start new containers
-      command: docker-compose up -d
-      args:
-        chdir: ../docker-compose.yml
+      docker_image: 
+        name: "{{ frontend_image }}"
+        source: pull
+      
+    - name: Start backend container
+      docker_container:
+        name: "{{ backend_container }}"
+        image: "{{ backend_image }}" 
+        state: started
+        ports:
+          - "{{ backend_port }}:{{ backend_port }}"
+        
+    - name: Start frontend container
+      docker_container:
+        name: "{{ frontend_container }}"
+        image: "{{ frontend_image }}"
+        state: started
+        ports:
+          - "{{ frontend_port }}:80"
