@@ -5,9 +5,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Set API URL for production
-ENV REACT_APP_API_URL=https://app.amiru-web.xyz/api/v1
-
 COPY . .
 RUN npm run build
 

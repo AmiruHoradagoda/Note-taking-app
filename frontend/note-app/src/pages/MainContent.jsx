@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import CreatableReactSelect from "react-select/creatable";
 import NoteComponent from "../components/NoteComponent";
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api/v1";
+const API_BASE_URL = "/api/v1";
 const MainContent = ({ searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);

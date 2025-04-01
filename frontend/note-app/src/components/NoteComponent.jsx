@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import CreatableReactSelect from "react-select/creatable";
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api/v1";
+const API_BASE_URL = "/api/v1";
 // Utility function to generate a color based on the tag name
 const generateTagColor = (tag) => {
   const colors = [
