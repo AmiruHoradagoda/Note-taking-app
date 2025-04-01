@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import CreatableReactSelect from "react-select/creatable";
 import NoteComponent from "../components/NoteComponent";
-
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api/v1";
 const MainContent = ({ searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,12 +29,9 @@ const MainContent = ({ searchResults }) => {
         throw new Error("User ID not found");
       }
 
-      const response = await fetch(
-        `http://localhost:8080/api/v1/notes/user/${userId}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/notes/user/${userId}`, {
+        headers: getAuthHeaders(),
+      });
 
       if (response.status === 401) {
         throw new Error("Session expired. Please login again.");
@@ -86,7 +83,7 @@ const MainContent = ({ searchResults }) => {
     e.preventDefault();
     try {
       const userId = localStorage.getItem("userId");
-      const response = await fetch("http://localhost:8080/api/v1/notes", {
+      const response = await fetch(`${API_BASE_URL}/notes`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
