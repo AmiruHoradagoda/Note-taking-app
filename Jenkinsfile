@@ -44,7 +44,7 @@ pipeline {
                     sh 'npm install --save-dev @babel/plugin-proposal-private-property-in-object'
                     sh 'npm install react-select' 
                     sh 'npm install'
-                    sh 'npm run build'
+                    sh 'CI=false npm run build'
                 }
             }
         }
