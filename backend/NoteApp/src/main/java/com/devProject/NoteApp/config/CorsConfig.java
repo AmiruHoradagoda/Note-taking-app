@@ -17,7 +17,7 @@ public class CorsConfig {
         final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         final CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.setAllowedOrigins(Arrays.asList(  "http://localhost:3000","https://notes.amiru-web.xyz"));
+        config.setAllowedOrigins(Arrays.asList("*"));
         config.setAllowedHeaders(Arrays.asList(
                 HttpHeaders.ORIGIN,
                 HttpHeaders.CONTENT_TYPE,
