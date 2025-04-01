@@ -13,7 +13,6 @@ pipeline {
         // SSH deployment variables
         SSH_CREDENTIALS_ID = "notekeep-prod-server"
         SSH_TARGET = "ubuntu@100.25.81.92"
-
     }
 
     tools {
@@ -54,6 +53,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Build Frontend') {
             steps {
                 dir('frontend/note-app') {  
@@ -62,9 +62,10 @@ pipeline {
                     sh 'npm install react-select' 
                     sh 'npm install'
                     sh 'REACT_APP_API_URL=https://app.amiru-web.xyz/api/v1 CI=false npm run build'
-            }
+                }
             }
         }
+        
         stage('Docker Build and Push') {
             steps {
                 dir('backend/NoteApp') {
@@ -91,36 +92,39 @@ pipeline {
                 }
             }
         }
-       stage('Ansible Deploy') {
-        steps {
-            script {
-                withCredentials([
-                usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
-                                usernameVariable: 'DOCKER_USERNAME', 
-                                passwordVariable: 'DOCKER_PASSWORD'),
-                sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", 
-                                keyFileVariable: 'SSH_KEY')
-            ]){
-                // Use single quotes to avoid Groovy interpolation security issue
-                sh '''
-                    # Create a temporary inventory file with correct values
-                    echo "[ec2]" > temp_inventory.ini
-                    echo "dev-server ansible_host=ec2-100-25-81-92.compute-1.amazonaws.com" >> temp_inventory.ini
-                    echo "" >> temp_inventory.ini
-                    echo "[ec2:vars]" >> temp_inventory.ini
-                    echo "ansible_user=ubuntu" >> temp_inventory.ini
-                    echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> temp_inventory.ini
-                    
-                    # Run ansible-playbook with the temporary inventory
-                    ansible-playbook -i temp_inventory.ini --private-key $SSH_KEY playbook.yml
-                    
-                    # Clean up
-                    rm temp_inventory.ini
-                '''
+        
+        stage('Ansible Deploy') {
+            steps {
+                script {
+                    withCredentials([
+                        usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", 
+                                    usernameVariable: 'DOCKER_USERNAME', 
+                                    passwordVariable: 'DOCKER_PASSWORD'),
+                        sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", 
+                                    keyFileVariable: 'SSH_KEY')
+                    ]){
+                        sh '''
+                            # Use the correct path to the Ansible files
+                            cd Ansible
+                            
+                            # Create a temporary inventory file with correct values
+                            echo "[ec2]" > temp_inventory.ini
+                            echo "dev-server ansible_host=ec2-100-25-81-92.compute-1.amazonaws.com" >> temp_inventory.ini
+                            echo "" >> temp_inventory.ini
+                            echo "[ec2:vars]" >> temp_inventory.ini
+                            echo "ansible_user=ubuntu" >> temp_inventory.ini
+                            echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> temp_inventory.ini
+                            
+                            # Run ansible-playbook with the temporary inventory
+                            ansible-playbook -i temp_inventory.ini --private-key $SSH_KEY playbook.yml
+                            
+                            # Clean up
+                            rm temp_inventory.ini
+                        '''
+                    }
+                }
             }
         }
-    }
-}
     }
     
     post {
