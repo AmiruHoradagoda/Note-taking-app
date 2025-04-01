@@ -49,10 +49,10 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
       });
 
       const data = await response.json();
-
+      console.log("Auth response:", data); 
       if (response.ok) {
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userId", data.userId); // Store user ID for future requests
+        localStorage.setItem("userId", data.userId); 
         if (isLogin) {
           onLoginSuccess?.();
         } else {
@@ -64,6 +64,7 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
         );
       }
     } catch (err) {
+      console.error("Auth error details:", err);
       setError("Failed to connect to the server");
     } finally {
       setIsLoading(false);

@@ -25,8 +25,12 @@ const MainContent = ({ searchResults }) => {
   const fetchNotes = async () => {
     try {
       const userId = localStorage.getItem("userId");
+      console.log("Current userId:", userId);
       if (!userId) {
-        throw new Error("User ID not found");
+        console.error("User ID not found in localStorage");
+        setError("User ID not found. Please log in again.");
+        setLoading(false);
+        return;
       }
 
       const response = await fetch(`${API_BASE_URL}/notes/user/${userId}`, {
