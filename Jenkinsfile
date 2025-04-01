@@ -1,9 +1,19 @@
 pipeline {
     agent any
     environment{
+        // Docker-related environment variables
         DOCKER_IMAGE_BACKEND = "amiru1234/note-app-backend:latest"
         DOCKER_IMAGE_FRONTEND = "amiru1234/note-app-frontend:latest"
         DOCKER_CREDENTIALS_ID = "dockerhub-credentials"
+
+        // Container names for deployment
+        DOCKER_CONTAINER_BACKEND = 'noteapp-backend'
+        DOCKER_CONTAINER_FRONTEND = 'noteapp-frontend'
+
+        // SSH deployment variables
+        SSH_CREDENTIALS_ID = "notekeep-prod-server"
+        SSH_TARGET = "ubuntu@100.25.81.92"
+
     }
 
     tools {
@@ -53,7 +63,7 @@ pipeline {
                 }
             }
         }
-         stage('Docker Build and Push') {
+        stage('Docker Build and Push') {
             steps {
                 dir('backend/NoteApp') {
                     script {
@@ -75,6 +85,29 @@ pipeline {
                                 docker push ${DOCKER_IMAGE_FRONTEND}
                             '''
                         }
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDENTIALS_ID}", keyFileVariable: 'SSH_KEY')]) {
+                        sh """
+                        ssh -i \${SSH_KEY} -o StrictHostKeyChecking=no ${SSH_TARGET} '
+                        # Stop and remove existing containers
+                        docker stop ${DOCKER_CONTAINER_BACKEND} || true
+                        docker rm ${DOCKER_CONTAINER_BACKEND} || true
+                        docker stop ${DOCKER_CONTAINER_FRONTEND} || true
+                        docker rm ${DOCKER_CONTAINER_FRONTEND} || true
+                        # Pull latest images
+                        docker pull ${DOCKER_IMAGE_BACKEND}
+                        docker pull ${DOCKER_IMAGE_FRONTEND}
+                        # Start new containers
+                        docker run -d --name ${DOCKER_CONTAINER_BACKEND} -p 8080:8080 ${DOCKER_IMAGE_BACKEND}
+                        docker run -d --name ${DOCKER_CONTAINER_FRONTEND} -p 3000:3000 ${DOCKER_IMAGE_FRONTEND}
+                        '
+                        """
                     }
                 }
             }
