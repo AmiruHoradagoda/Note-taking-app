@@ -1,5 +1,10 @@
 pipeline {
     agent any
+    environment{
+        DOCKER_IMAGE_BACKEND = "amiru1234/note-app-backend:latest"
+        DOCKER_IMAGE_FRONTEND = "amiru1234/note-app-frontend:latest"
+        DOCKER_CREDENTIALS_ID = "dockerhub-credentials"
+    }
 
     tools {
         maven 'mvn-3.9.8'
@@ -48,8 +53,32 @@ pipeline {
                 }
             }
         }
-        
-
+         stage('Docker Build and Push') {
+            steps {
+                dir('backend/NoteApp') {
+                    script {
+                        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                            sh '''
+                                docker build -t ${DOCKER_IMAGE_BACKEND} .
+                                echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                                docker push ${DOCKER_IMAGE_BACKEND}
+                            '''
+                        }
+                    }
+                }
+                dir('frontend/note-app') {
+                    script {
+                        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                            sh '''
+                                docker build -t ${DOCKER_IMAGE_FRONTEND} .
+                                echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                                docker push ${DOCKER_IMAGE_FRONTEND}
+                            '''
+                        }
+                    }
+                }
+            }
+        }
     }
     
     post {
