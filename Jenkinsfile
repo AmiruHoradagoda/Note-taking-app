@@ -35,6 +35,8 @@ pipeline {
                         withCredentials([usernamePassword(credentialsId: 'notekeep-prod-database-credentials', usernameVariable: 'MONGODB_USERNAME', passwordVariable: 'MONGODB_PASSWORD')]) {
                             sh '''#!/bin/bash
                             echo "Building backend with Mongodb database"
+                            echo "MongoDB Username: $MONGODB_USERNAME"
+                            echo "MongoDB Password: $MONGODB_PASSWORD"
                             export MONGODB_USERNAME=$MONGODB_USERNAME
                             export MONGODB_PASSWORD=$MONGODB_PASSWORD
                             mvn clean package
