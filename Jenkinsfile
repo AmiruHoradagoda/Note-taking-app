@@ -13,6 +13,7 @@ pipeline {
         // SSH deployment variables
         SSH_CREDENTIALS_ID = "notekeep-prod-server"
         SSH_TARGET = "ubuntu@100.25.81.92"
+
     }
 
     tools {
