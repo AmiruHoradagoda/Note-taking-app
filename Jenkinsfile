@@ -41,8 +41,8 @@ pipeline {
             steps {
                 dir('frontend/note-app') {  
                     echo "Building frontend"
-                    sh 'node -v'  
-                    sh 'npm -v'   
+                    sh 'npm install --save-dev @babel/plugin-proposal-private-property-in-object'
+                    sh 'npm install react-select' 
                     sh 'npm install'
                     sh 'npm run build'
                 }
