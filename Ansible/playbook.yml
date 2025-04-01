@@ -1,0 +1,19 @@
+- name: Deploy Note App
+  hosts: ec2
+  become: true
+  tasks:
+    - name: Pull latest backend image
+      command: docker pull madhawarathnayake/note-backend:latest
+
+    - name: Pull latest frontend image
+      command: docker pull madhawarathnayake/note-frontend:latest
+
+    - name: Stop running containers
+      command: docker-compose down
+      args:
+        chdir: ../docker-compose.yml
+
+    - name: Start new containers
+      command: docker-compose up -d
+      args:
+        chdir: ../docker-compose.yml

@@ -1,0 +1,18 @@
+services:
+  backend:
+    image: note-backend-image:v1
+    container_name: note-backend-container
+    ports:
+      - "5050:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  frontend:
+    image: note-frontend-image:v1
+    container_name: note-frontend-container
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
