@@ -8,6 +8,7 @@ import { apiFetch, clearAuth, getUserId } from "./utils/api";
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
+  const [activeSection, setActiveSection] = useState("subjects");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -21,6 +22,7 @@ const App = () => {
   const handleLogout = () => {
     clearAuth();
     setSearchResults(null);
+    setActiveSection("subjects");
     setIsAuthenticated(false);
   };
 
@@ -29,6 +31,8 @@ const App = () => {
       setSearchResults(null);
       return;
     }
+
+    setActiveSection("notes");
 
     try {
       const data = await apiFetch("/notes/search", {
@@ -54,11 +58,11 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen">
-      <NavBar onLogout={handleLogout} onSearch={handleSearch} />
-      <SideBar />
-      <main className="px-4 pb-10 pt-40 sm:px-6 md:pt-32 lg:pl-80 lg:pr-8">
-        <MainContent searchResults={searchResults} />
+    <div className="min-h-screen bg-white">
+      <NavBar onSearch={handleSearch} />
+      <SideBar activeSection={activeSection} onSectionChange={setActiveSection} onLogout={handleLogout} />
+      <main className="px-6 pb-10 pt-28 lg:ml-64 lg:px-8">
+        <MainContent activeSection={activeSection} searchResults={searchResults} />
       </main>
     </div>
   );

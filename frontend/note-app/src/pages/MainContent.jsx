@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookMarked, FileText, Layers, Plus, Upload, X } from "lucide-react";
+import {
+  BookOpen,
+  Edit,
+  FileText,
+  Grid3X3,
+  NotebookPen,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import CreatableReactSelect from "react-select/creatable";
 import NoteComponent from "../components/NoteComponent";
 import { Badge } from "../components/ui/Badge";
@@ -8,6 +18,8 @@ import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
 import { apiFetch, getUserId } from "../utils/api";
+
+const defaultSubjects = ["Data Structures", "Programming Basics"];
 
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
@@ -22,16 +34,24 @@ const sanitizeNote = (note) => ({
 const sanitizeNotes = (noteList) =>
   Array.isArray(noteList) ? noteList.map(sanitizeNote) : [];
 
-const MainContent = ({ searchResults }) => {
+const subjectStorageKey = () => `leckeeper-subjects-${getUserId() || "guest"}`;
+
+const uniqueValues = (items) =>
+  [...new Set(items.map((item) => item.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [notes, setNotes] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState("all");
+  const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
+  const [newSubjectName, setNewSubjectName] = useState("");
   const [pdfFileName, setPdfFileName] = useState("");
-  const [newNote, setNewNote] = useState({
-    title: "",
-    content: "",
-  });
+  const [newNote, setNewNote] = useState({ title: "", subject: "", content: "" });
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -54,6 +74,11 @@ const MainContent = ({ searchResults }) => {
   }, []);
 
   useEffect(() => {
+    const savedSubjects = JSON.parse(localStorage.getItem(subjectStorageKey()) || "[]");
+    setSubjects(uniqueValues([...defaultSubjects, ...savedSubjects]));
+  }, []);
+
+  useEffect(() => {
     if (searchResults) {
       setNotes(sanitizeNotes(searchResults));
       setLoading(false);
@@ -62,18 +87,57 @@ const MainContent = ({ searchResults }) => {
     }
   }, [fetchNotes, searchResults]);
 
-  const stats = useMemo(() => {
-    const uniqueTags = new Set(notes.flatMap((note) => note.tags || []));
-    return [
-      { label: "Total notes", value: notes.length, Icon: BookMarked },
-      {
-        label: "PDF selected",
-        value: notes.filter((note) => note.attachmentName).length,
-        Icon: FileText,
-      },
-      { label: "Subjects/tags", value: uniqueTags.size, Icon: Layers },
-    ];
-  }, [notes]);
+  const noteSubjects = useMemo(
+    () => uniqueValues(notes.flatMap((note) => note.tags || [])),
+    [notes]
+  );
+
+  const allSubjects = useMemo(
+    () => uniqueValues([...subjects, ...noteSubjects]),
+    [subjects, noteSubjects]
+  );
+
+  const subjectOptions = useMemo(
+    () => allSubjects.map((subject) => ({ label: subject, value: subject })),
+    [allSubjects]
+  );
+
+  const filteredNotes = useMemo(() => {
+    if (selectedSubjectFilter === "all") return notes;
+    return notes.filter((note) => note.tags?.includes(selectedSubjectFilter));
+  }, [notes, selectedSubjectFilter]);
+
+  const subjectCards = useMemo(
+    () =>
+      allSubjects.map((subject) => ({
+        name: subject,
+        notes: notes.filter((note) => note.tags?.includes(subject)).length,
+        pdfs: notes.filter((note) => note.tags?.includes(subject) && note.attachmentName).length,
+        canRemove: subjects.includes(subject),
+      })),
+    [allSubjects, notes, subjects]
+  );
+
+  const saveSubjects = (nextSubjects) => {
+    const cleaned = uniqueValues(nextSubjects);
+    setSubjects(cleaned);
+    localStorage.setItem(subjectStorageKey(), JSON.stringify(cleaned));
+  };
+
+  const handleAddSubject = (event) => {
+    event.preventDefault();
+    if (!newSubjectName.trim()) return;
+
+    saveSubjects([...subjects, newSubjectName]);
+    setNewSubjectName("");
+    setShowSubjectForm(false);
+    setError("");
+  };
+
+  const handleRemoveSubject = (subject) => {
+    saveSubjects(subjects.filter((item) => item !== subject));
+    if (selectedSubjectFilter === subject) setSelectedSubjectFilter("all");
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -97,18 +161,21 @@ const MainContent = ({ searchResults }) => {
         return;
       }
 
+      const subject = newNote.subject.trim();
+      const tags = uniqueValues([subject, ...(selectedTags || []).map((tag) => tag.value)]);
       const data = await apiFetch("/notes", {
         method: "POST",
         body: {
           title: newNote.title,
           content: newNote.content,
           userId,
-          tags: (selectedTags || []).map((tag) => tag.value),
+          tags,
         },
       });
 
+      if (subject) saveSubjects([...subjects, subject]);
       setNotes((prev) => [sanitizeNote({ ...data, attachmentName: pdfFileName }), ...prev]);
-      setNewNote({ title: "", content: "" });
+      setNewNote({ title: "", subject: "", content: "" });
       setSelectedTags([]);
       setPdfFileName("");
       setError("");
@@ -119,171 +186,264 @@ const MainContent = ({ searchResults }) => {
   };
 
   const handleNoteUpdate = (updatedNote) => {
-    setNotes((prev) =>
-      prev.map((note) => (note.id === updatedNote.id ? sanitizeNote(updatedNote) : note))
-    );
+    const cleanNote = sanitizeNote(updatedNote);
+    saveSubjects([...subjects, ...(cleanNote.tags || [])]);
+    setNotes((prev) => prev.map((note) => (note.id === cleanNote.id ? cleanNote : note)));
   };
 
   const handleNoteDelete = (noteId) => {
     setNotes((prev) => prev.filter((note) => note.id !== noteId));
   };
 
+  const PageHeader = ({ title, description, action }) => (
+    <div className="mb-9 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
+        <p className="mt-2 text-base text-muted-foreground">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+
+  const renderAddNote = () => (
+    <div className="max-w-3xl">
+      <PageHeader title="Add Note" description="Create a lecture note with subject and optional PDF." />
+      <Card className="bg-white p-6">
+        <form onSubmit={handleCreateNote} className="space-y-5">
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold">Lecture title</span>
+            <Input
+              value={newNote.title}
+              onChange={(event) => setNewNote((prev) => ({ ...prev, title: event.target.value }))}
+              placeholder="e.g. Stack and Queue"
+              required
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold">Subject</span>
+            <select
+              value={newNote.subject}
+              onChange={(event) => setNewNote((prev) => ({ ...prev, subject: event.target.value }))}
+              required
+              className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Select subject</option>
+              {allSubjects.map((subject) => (
+                <option key={subject} value={subject}>{subject}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold">Extra tags</span>
+            <CreatableReactSelect
+              isMulti
+              placeholder="Tutorial, Important..."
+              value={selectedTags}
+              onChange={setSelectedTags}
+              options={subjectOptions}
+              classNamePrefix="select"
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold">Short note</span>
+            <Textarea
+              value={newNote.content}
+              onChange={(event) => setNewNote((prev) => ({ ...prev, content: event.target.value }))}
+              placeholder="Write the key lecture points here..."
+              rows={6}
+              required
+            />
+          </label>
+
+          <div className="space-y-2">
+            <span className="text-sm font-semibold">Lecture PDF</span>
+            {pdfFileName ? (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted p-3">
+                <span className="truncate text-sm font-semibold">{pdfFileName}</span>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setPdfFileName("") }>
+                  <X size={16} />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted p-5 text-sm font-semibold hover:bg-secondary">
+                <Upload size={18} />
+                Choose PDF
+                <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleFileChange} />
+              </label>
+            )}
+          </div>
+
+          <Button type="submit" className="px-7">Save Note</Button>
+        </form>
+      </Card>
+    </div>
+  );
+
+  const renderSubjects = () => (
+    <div>
+      <PageHeader
+        title="Subjects"
+        description="Organize your subjects by semester"
+        action={
+          <Button type="button" onClick={() => setShowSubjectForm((prev) => !prev)}>
+            <Plus size={18} />
+            New Subject
+          </Button>
+        }
+      />
+
+      {showSubjectForm && (
+        <Card className="mb-8 max-w-xl bg-white p-5">
+          <form onSubmit={handleAddSubject} className="flex gap-3">
+            <Input
+              value={newSubjectName}
+              onChange={(event) => setNewSubjectName(event.target.value)}
+              placeholder="Subject name"
+            />
+            <Button type="submit">Add</Button>
+          </form>
+        </Card>
+      )}
+
+      <section>
+        <h2 className="text-2xl font-extrabold">Semester 1</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{subjectCards.length} subjects</p>
+
+        <div className="mt-5 grid max-w-5xl gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {subjectCards.map((subject) => (
+            <Card key={subject.name} className="min-h-64 bg-card p-6 shadow-soft">
+              <div className="mb-12 flex items-start justify-between">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-primary">
+                  <BookOpen size={22} />
+                </div>
+                <div className="flex gap-3 text-muted-foreground">
+                  <button type="button" className="hover:text-primary" title="Edit subject">
+                    <Edit size={17} />
+                  </button>
+                  {subject.canRemove && (
+                    <button type="button" className="hover:text-destructive" title="Delete subject" onClick={() => handleRemoveSubject(subject.name)}>
+                      <Trash2 size={17} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <h3 className="text-xl font-extrabold">{subject.name}</h3>
+
+              <div className="mt-10 space-y-4 border-t border-border pt-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <NotebookPen size={16} />
+                    Notes
+                  </span>
+                  <span className="text-lg font-extrabold">{subject.notes}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <FileText size={16} />
+                    PDFs
+                  </span>
+                  <span className="text-lg font-extrabold">{subject.pdfs}</span>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
+  const renderNotes = () => (
+    <div>
+      <PageHeader title="My Notes" description="Browse notes by subject" />
+      <div className="mb-5 flex items-center gap-3">
+        <select
+          value={selectedSubjectFilter}
+          onChange={(event) => setSelectedSubjectFilter(event.target.value)}
+          className="h-10 rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="all">All subjects</option>
+          {allSubjects.map((subject) => (
+            <option key={subject} value={subject}>{subject}</option>
+          ))}
+        </select>
+        <Badge variant="outline">{filteredNotes.length} notes</Badge>
+      </div>
+
+      {filteredNotes.length === 0 ? (
+        <Card className="grid min-h-64 place-items-center bg-white p-8 text-center">
+          <div>
+            <FileText className="mx-auto text-muted-foreground" size={34} />
+            <h3 className="mt-4 text-xl font-extrabold">No notes found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Add a note or change the subject filter.</p>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filteredNotes.map((note) => (
+            <NoteComponent
+              key={note.id}
+              note={note}
+              onNoteUpdate={handleNoteUpdate}
+              onNoteDelete={handleNoteDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDashboard = () => (
+    <div>
+      <PageHeader title="Dashboard" description="A quick view of your lecture workspace" />
+      <div className="grid max-w-4xl gap-5 sm:grid-cols-3">
+        <Card className="bg-white p-6">
+          <p className="text-sm text-muted-foreground">Total Notes</p>
+          <p className="mt-2 text-3xl font-extrabold">{notes.length}</p>
+        </Card>
+        <Card className="bg-white p-6">
+          <p className="text-sm text-muted-foreground">Subjects</p>
+          <p className="mt-2 text-3xl font-extrabold">{allSubjects.length}</p>
+        </Card>
+        <Card className="bg-white p-6">
+          <p className="text-sm text-muted-foreground">PDFs</p>
+          <p className="mt-2 text-3xl font-extrabold">{notes.filter((note) => note.attachmentName).length}</p>
+        </Card>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-secondary border-t-primary" />
+        <div className="h-9 w-9 animate-spin rounded-full border-4 border-secondary border-t-primary" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
-      <section className="rounded-[2rem] border border-border bg-card/85 p-6 shadow-soft backdrop-blur sm:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-          <div>
-            <Badge variant="secondary">Student dashboard</Badge>
-            <h1 className="mt-4 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-5xl">
-              Keep lecture PDFs and short notes organized by subject.
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Create concise lecture summaries, tag them by subject, and prepare PDF attachments for each note.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-            {stats.map(({ label, value, Icon }) => (
-              <Card key={label} className="p-4 shadow-none">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-                    <p className="mt-1 text-2xl font-extrabold">{value}</p>
-                  </div>
-                  <div className="rounded-xl bg-secondary p-3 text-secondary-foreground">
-                    <Icon size={18} />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
+    <div className="mx-auto max-w-7xl">
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <section className="grid gap-8 xl:grid-cols-[420px_1fr]">
-        <Card className="h-fit p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight">Create note</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Add a lecture summary and subject tags.</p>
-            </div>
-            <div className="rounded-2xl bg-primary p-3 text-primary-foreground">
-              <Plus size={20} />
-            </div>
-          </div>
-
-          <form onSubmit={handleCreateNote} className="space-y-4">
-            <label className="block space-y-2">
-              <span className="text-sm font-semibold">Lecture title</span>
-              <Input
-                type="text"
-                placeholder="e.g. Database normalization"
-                value={newNote.title}
-                onChange={(event) => setNewNote((prev) => ({ ...prev, title: event.target.value }))}
-                required
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-semibold">Subject tags</span>
-              <CreatableReactSelect
-                isMulti
-                placeholder="Data Structures, Networking..."
-                value={selectedTags}
-                onChange={setSelectedTags}
-                classNamePrefix="select"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-semibold">Short note</span>
-              <Textarea
-                placeholder="Write the key lecture points here..."
-                value={newNote.content}
-                onChange={(event) => setNewNote((prev) => ({ ...prev, content: event.target.value }))}
-                rows={6}
-                required
-              />
-            </label>
-
-            <div className="space-y-2">
-              <span className="text-sm font-semibold">Lecture PDF</span>
-              {pdfFileName ? (
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-secondary/70 p-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{pdfFileName}</p>
-                    <p className="text-xs text-muted-foreground">Selected locally for this note</p>
-                  </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setPdfFileName("") }>
-                    <X size={16} />
-                  </Button>
-                </div>
-              ) : (
-                <label className="flex cursor-pointer flex-col items-center rounded-2xl border border-dashed border-border bg-background/70 p-5 text-center transition-colors hover:bg-secondary/50">
-                  <Upload className="mb-2 text-muted-foreground" size={24} />
-                  <span className="text-sm font-semibold">Choose PDF</span>
-                  <span className="mt-1 text-xs text-muted-foreground">PDF persistence needs backend upload support.</span>
-                  <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleFileChange} />
-                </label>
-              )}
-            </div>
-
-            <Button type="submit" className="w-full" size="lg">
-              Create Note
-            </Button>
-          </form>
-        </Card>
-
-        <section>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-extrabold tracking-tight">My notes</h2>
-              <p className="text-sm text-muted-foreground">
-                {searchResults ? "Showing search results" : "Recently saved lecture notes"}
-              </p>
-            </div>
-            <Badge variant="outline">{notes.length} notes</Badge>
-          </div>
-
-          {notes.length === 0 ? (
-            <Card className="grid min-h-80 place-items-center p-8 text-center">
-              <div>
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
-                  <FileText size={26} />
-                </div>
-                <h3 className="mt-5 text-xl font-extrabold">No notes found</h3>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Create your first lecture note with a title, short summary, and subject tags.
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 2xl:grid-cols-3">
-              {notes.map((note) => (
-                <NoteComponent
-                  key={note.id}
-                  note={note}
-                  onNoteUpdate={handleNoteUpdate}
-                  onNoteDelete={handleNoteDelete}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      </section>
+      {activeSection === "dashboard" && renderDashboard()}
+      {activeSection === "notes" && renderNotes()}
+      {activeSection === "add" && renderAddNote()}
+      {activeSection === "subjects" && renderSubjects()}
+      {activeSection === "settings" && (
+        <div>
+          <PageHeader title="Settings" description="Account settings will be added later" />
+          <Card className="max-w-xl bg-white p-6 text-sm text-muted-foreground">
+            No settings are available yet.
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

@@ -34,15 +34,11 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
-      borderRadius: {
-        xl: "1rem",
-        "2xl": "1.25rem",
-      },
       fontFamily: {
         sans: ["Plus Jakarta Sans", "Segoe UI", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 20px 60px -35px rgba(20, 40, 80, 0.45)",
+        soft: "0 2px 8px rgba(15, 23, 42, 0.08)",
       },
     },
   },
