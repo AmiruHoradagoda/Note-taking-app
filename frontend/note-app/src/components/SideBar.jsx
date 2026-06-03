@@ -3,62 +3,81 @@ import {
   Archive,
   Bell,
   FileText,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Menu,
+  Plus,
   Tag,
   Trash2,
+  X,
 } from "lucide-react";
+import { Badge } from "./ui/Badge";
 
 const menuItems = [
-  { label: "Notes", Icon: FileText },
+  { label: "All Notes", Icon: FileText, active: true },
+  { label: "Add Note", Icon: Plus },
+  { label: "Subjects", Icon: Tag },
   { label: "Reminders", Icon: Bell },
-  { label: "Edit Labels", Icon: Tag },
   { label: "Archive", Icon: Archive },
   { label: "Trash", Icon: Trash2 },
 ];
 
 const SideBar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const ToggleIcon = isOpen ? PanelLeftClose : PanelLeftOpen;
 
   return (
     <>
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed left-0 z-30 p-2 text-white bg-yellow-500 rounded-r-lg top-20 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+        className="fixed left-4 top-24 z-40 rounded-xl border border-border bg-card p-2 text-foreground shadow-sm lg:hidden"
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
         aria-expanded={isOpen}
       >
-        <ToggleIcon size={20} />
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       <aside
-        className={`fixed left-0 top-16 h-full bg-gray-100 p-4 shadow-md transition-all duration-300 ease-in-out z-20 ${
-          isOpen ? "w-60" : "w-0 -translate-x-full"
+        className={`fixed bottom-0 left-0 top-20 z-30 w-72 border-r border-border/80 bg-card/90 p-5 shadow-soft backdrop-blur-xl transition-transform duration-200 lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div
-          className={`space-y-1 ${
-            isOpen ? "opacity-100" : "opacity-0"
-          } transition-opacity duration-300`}
-        >
-          {menuItems.map(({ label, Icon }) => (
+        <div className="mb-6 rounded-2xl bg-primary p-5 text-primary-foreground">
+          <p className="text-sm font-medium opacity-80">Study workspace</p>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight">Lecture Notes</h2>
+          <p className="mt-2 text-sm opacity-85">Keep PDFs, short summaries, and tags in one place.</p>
+        </div>
+
+        <nav className="space-y-2">
+          {menuItems.map(({ label, Icon, active }) => (
             <button
               key={label}
               type="button"
-              className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200"
+              onClick={() => setIsOpen(false)}
+              className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${
+                active
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
             >
-              <Icon size={18} />
-              {label}
+              <span className="flex items-center gap-3">
+                <Icon size={18} />
+                {label}
+              </span>
+              {active && <Badge variant="outline">Now</Badge>}
             </button>
           ))}
+        </nav>
+
+        <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-dashed border-border bg-background/70 p-4">
+          <p className="text-sm font-semibold">PDF storage status</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Upload UI is ready. Backend file upload endpoint is still required for persistence.
+          </p>
         </div>
       </aside>
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-10 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-20 bg-foreground/40 lg:hidden"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />

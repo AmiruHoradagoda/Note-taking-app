@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Eye } from "lucide-react";
+import { BookOpen, Eye, EyeOff, FileText, Lock, User } from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Badge } from "../components/ui/Badge";
 import { apiFetch } from "../utils/api";
 
 const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
@@ -13,16 +17,13 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setIsLoading(true);
     setError("");
 
@@ -45,11 +46,8 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
       if (data?.token && data?.userId) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.userId);
-        if (isLogin) {
-          onLoginSuccess?.();
-        } else {
-          onRegisterSuccess?.();
-        }
+        if (isLogin) onLoginSuccess?.();
+        else onRegisterSuccess?.();
       } else {
         setError("Authentication response did not include a token and user ID.");
       }
@@ -62,95 +60,142 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-blue-500">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg">
-        <h2 className="text-2xl font-semibold text-center">
-          {isLogin ? "Login" : "Signup"}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 text-sm text-red-700 bg-red-100 border border-red-400 rounded">
-              {error}
+    <main className="grid min-h-screen place-items-center px-4 py-10">
+      <div className="grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-soft lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="relative hidden min-h-[680px] flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
+          <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_20%,white,transparent_18rem),radial-gradient(circle_at_80%_70%,white,transparent_16rem)]" />
+          <div className="relative">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15">
+              <BookOpen size={28} />
             </div>
-          )}
-
-          <div className="space-y-4">
-            <input
-              type="text"
-              name="username"
-              placeholder="Username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute text-gray-500 transform -translate-y-1/2 right-2 top-1/2"
-              >
-                <Eye size={20} />
-              </button>
-            </div>
-
-            {!isLogin && (
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  placeholder="Confirm password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            )}
+            <h1 className="mt-8 max-w-lg text-5xl font-extrabold leading-tight tracking-tight">
+              Organize every lecture note before it gets lost.
+            </h1>
+            <p className="mt-5 max-w-md text-base text-primary-foreground/80">
+              LecKeep is built for short notes, tagged subjects, and lecture PDFs in a clean student workspace.
+            </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full p-2 text-white bg-blue-500 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-          >
-            {isLoading
-              ? isLogin
-                ? "Logging in..."
-                : "Signing up..."
-              : isLogin
-              ? "Login"
-              : "Signup"}
-          </button>
-        </form>
+          <div className="relative grid grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
+              <FileText className="mb-4" size={24} />
+              <p className="text-sm font-semibold">PDF-friendly structure</p>
+              <p className="mt-1 text-xs text-primary-foreground/70">Prepare notes around lecture files.</p>
+            </div>
+            <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
+              <Lock className="mb-4" size={24} />
+              <p className="text-sm font-semibold">Private account</p>
+              <p className="mt-1 text-xs text-primary-foreground/70">Your notes stay under your login.</p>
+            </div>
+          </div>
+        </section>
 
-        <div className="text-sm text-center">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError("");
-              setFormData({ username: "", password: "", confirmPassword: "" });
-            }}
-            className="text-blue-500 hover:underline"
-          >
-            {isLogin ? "Signup" : "Login"}
-          </button>
-        </div>
+        <section className="p-6 sm:p-10">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <Badge variant="secondary">LecKeep</Badge>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-tight">
+                {isLogin ? "Welcome back" : "Create account"}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isLogin
+                  ? "Login to manage lecture notes and summaries."
+                  : "Sign up to start your lecture note library."}
+              </p>
+            </div>
+          </div>
+
+          <Card className="border-border/80 p-6 shadow-none">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold">Username</span>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    name="username"
+                    placeholder="Enter username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    required
+                    className="pl-10"
+                  />
+                </div>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold">Password</span>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Enter password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    className="pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </label>
+
+              {!isLogin && (
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold">Confirm password</span>
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="Repeat password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                  />
+                </label>
+              )}
+
+              <Button type="submit" disabled={isLoading} className="w-full" size="lg">
+                {isLoading
+                  ? isLogin
+                    ? "Logging in..."
+                    : "Signing up..."
+                  : isLogin
+                  ? "Login"
+                  : "Sign up"}
+              </Button>
+            </form>
+          </Card>
+
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            {isLogin ? "Do not have an account? " : "Already have an account? "}
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin((prev) => !prev);
+                setError("");
+                setFormData({ username: "", password: "", confirmPassword: "" });
+              }}
+              className="font-semibold text-primary hover:underline"
+            >
+              {isLogin ? "Create one" : "Login"}
+            </button>
+          </p>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 

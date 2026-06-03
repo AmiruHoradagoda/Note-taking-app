@@ -1,27 +1,22 @@
 import { useEffect, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Calendar, FileText, Pencil, Save, Tag, Trash2, X } from "lucide-react";
 import CreatableReactSelect from "react-select/creatable";
+import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { Input } from "./ui/Input";
+import { Textarea } from "./ui/Textarea";
 import { apiFetch } from "../utils/api";
 
-// Utility function to generate a color based on the tag name
-const generateTagColor = (tag) => {
-  const colors = [
-    "bg-red-500",
-    "bg-blue-500",
-    "bg-green-500",
-    "bg-yellow-500",
-    "bg-purple-500",
-    "bg-pink-500",
-    "bg-teal-500",
-    "bg-indigo-500",
-    "bg-orange-500",
-    "bg-gray-500",
-  ];
-  // Generate a consistent index for the color based on the tag name
-  const index =
-    tag.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
-    colors.length;
-  return colors[index];
+const formatDate = (value) => {
+  if (!value) return "Recently added";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recently added";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
@@ -34,9 +29,7 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
 
   useEffect(() => {
     setEditedNote(note);
-    setSelectedTags(
-      (note.tags || []).map((tag) => ({ label: tag, value: tag }))
-    );
+    setSelectedTags((note.tags || []).map((tag) => ({ label: tag, value: tag })));
   }, [note]);
 
   const handleUpdate = async () => {
@@ -51,7 +44,7 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
         },
       });
 
-      onNoteUpdate(updatedNote);
+      onNoteUpdate({ ...updatedNote, attachmentName: note.attachmentName });
       setIsEditing(false);
       setError("");
     } catch (err) {
@@ -61,117 +54,126 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this note?")) {
-      try {
-        await apiFetch(`/notes/${note.id}`, {
-          method: "DELETE",
-        });
+    if (!window.confirm("Delete this note?")) return;
 
-        onNoteDelete(note.id);
-      } catch (err) {
-        setError(err.message || "Failed to delete note");
-        console.error("Delete error:", err);
-      }
+    try {
+      await apiFetch(`/notes/${note.id}`, { method: "DELETE" });
+      onNoteDelete(note.id);
+    } catch (err) {
+      setError(err.message || "Failed to delete note");
+      console.error("Delete error:", err);
     }
   };
 
   const handleCancel = () => {
     setEditedNote(note);
-    setSelectedTags(
-      (note.tags || []).map((tag) => ({ label: tag, value: tag }))
-    );
+    setSelectedTags((note.tags || []).map((tag) => ({ label: tag, value: tag })));
     setError("");
     setIsEditing(false);
   };
 
   if (isEditing) {
     return (
-      <div className="p-4 bg-white rounded-lg shadow">
-        {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
-        <input
-          type="text"
-          value={editedNote.title}
-          onChange={(e) =>
-            setEditedNote({ ...editedNote, title: e.target.value })
-          }
-          className="w-full p-2 mb-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Note Title"
-        />
-        <textarea
-          value={editedNote.content}
-          onChange={(e) =>
-            setEditedNote({ ...editedNote, content: e.target.value })
-          }
-          className="w-full p-2 mb-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-          rows="3"
-          placeholder="Note content..."
-        />
-        <CreatableReactSelect
-          isMulti
-          className="w-full mb-2"
-          placeholder="Add Tags"
-          value={selectedTags}
-          onChange={setSelectedTags}
-          classNamePrefix="select"
-        />
-        <div className="flex justify-end mt-2 space-x-2">
-          <button
-            onClick={handleCancel}
-            className="px-3 py-1 text-gray-600 border border-gray-300 rounded hover:text-gray-800"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleUpdate}
-            className="px-3 py-1 text-white bg-blue-500 rounded hover:bg-blue-600"
-          >
-            Save
-          </button>
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <Badge variant="secondary">Editing</Badge>
+            <h3 className="mt-2 text-lg font-bold">Update lecture note</h3>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={handleCancel}>
+            <X size={18} />
+          </Button>
         </div>
-      </div>
+
+        {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+        <div className="space-y-3">
+          <Input
+            type="text"
+            value={editedNote.title}
+            onChange={(event) => setEditedNote({ ...editedNote, title: event.target.value })}
+            placeholder="Lecture title"
+          />
+          <Textarea
+            value={editedNote.content}
+            onChange={(event) => setEditedNote({ ...editedNote, content: event.target.value })}
+            placeholder="Short note content"
+            rows={5}
+          />
+          <CreatableReactSelect
+            isMulti
+            placeholder="Add tags or subjects"
+            value={selectedTags}
+            onChange={setSelectedTags}
+            classNamePrefix="select"
+          />
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleUpdate}>
+            <Save size={16} />
+            Save
+          </Button>
+        </div>
+      </Card>
     );
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
-      {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
-      <div className="flex items-center justify-between">
-        <h4 className="text-lg font-bold">{note.title}</h4>
-        <div className="mt-2">
-          {note.tags && note.tags.length > 0 && (
-            <div className="flex gap-2">
-              {note.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className={`px-2 py-1 text-sm text-white rounded-full ${generateTagColor(
-                    tag
-                  )}`}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+    <Card className="group flex min-h-64 flex-col p-5 transition-all hover:-translate-y-1 hover:shadow-soft">
+      {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
+          <FileText size={21} />
+        </div>
+        <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+          <Button type="button" variant="ghost" size="icon" onClick={() => setIsEditing(true)} title="Edit note">
+            <Pencil size={16} />
+          </Button>
+          <Button type="button" variant="ghost" size="icon" onClick={handleDelete} title="Delete note" className="text-destructive hover:bg-red-50 hover:text-destructive">
+            <Trash2 size={16} />
+          </Button>
         </div>
       </div>
-      <p className="mt-2 text-gray-600">{note.content}</p>
-      <div className="flex justify-end mt-4 space-x-2">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="p-2 text-gray-500 transition-colors hover:text-blue-600"
-          title="Edit note"
-        >
-          <Pencil size={16} />
-        </button>
-        <button
-          onClick={handleDelete}
-          className="p-2 text-gray-500 transition-colors hover:text-red-600"
-          title="Delete note"
-        >
-          <Trash2 size={16} />
-        </button>
+
+      <h3 className="text-lg font-extrabold leading-snug tracking-tight">{note.title}</h3>
+      <p className="mt-3 line-clamp-5 flex-1 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+        {note.content}
+      </p>
+
+      <div className="mt-5 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {(note.tags || []).length > 0 ? (
+            note.tags.map((tag) => (
+              <Badge key={tag} variant="outline">
+                <Tag size={12} />
+                {tag}
+              </Badge>
+            ))
+          ) : (
+            <Badge variant="secondary">No tags</Badge>
+          )}
+          {note.attachmentName && (
+            <Badge variant="success">
+              <FileText size={12} />
+              PDF
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Calendar size={13} />
+            {formatDate(note.createdAt)}
+          </span>
+          {note.attachmentName && <span className="max-w-28 truncate">{note.attachmentName}</span>}
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

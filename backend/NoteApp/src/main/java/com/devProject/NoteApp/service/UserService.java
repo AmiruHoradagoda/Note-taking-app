@@ -52,6 +52,20 @@ public class UserService {
                 .build();
     }
 
+    public void initializeUser() {
+        String username = "amiru@gmail.com";
+
+        if (repo.findByUsername(username) != null) {
+            return;
+        }
+
+        Users user = new Users();
+        user.setUsername(username);
+        user.setPassword(encoder.encode("amiru@123"));
+
+        repo.save(user);
+    }
+
     public AuthenticationResponse verify(UserRequestDto user) {
         // Authenticate the user
         Authentication authentication = authManager.authenticate(

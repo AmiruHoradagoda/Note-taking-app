@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import MainContent from "./pages/MainContent";
@@ -11,9 +11,7 @@ const App = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      setIsAuthenticated(true);
-    }
+    if (token) setIsAuthenticated(true);
   }, []);
 
   const handleAuthSuccess = () => {
@@ -56,14 +54,12 @@ const App = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen">
       <NavBar onLogout={handleLogout} onSearch={handleSearch} />
-      <div className="flex flex-1 pt-16">
-        <SideBar />
-        <main className="flex-1 p-4 transition-all duration-300 lg:ml-60">
-          <MainContent searchResults={searchResults} />
-        </main>
-      </div>
+      <SideBar />
+      <main className="px-4 pb-10 pt-40 sm:px-6 md:pt-32 lg:pl-80 lg:pr-8">
+        <MainContent searchResults={searchResults} />
+      </main>
     </div>
   );
 };
