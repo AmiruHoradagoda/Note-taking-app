@@ -8,13 +8,19 @@ import { apiFetch, clearAuth, getUserId } from "./utils/api";
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
-  const [activeSection, setActiveSection] = useState("subjects");
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) setIsAuthenticated(true);
   }, []);
 
+
+  useEffect(() => {
+    const openAddNote = () => setActiveSection("add");
+    window.addEventListener("leckeeper:navigate-add", openAddNote);
+    return () => window.removeEventListener("leckeeper:navigate-add", openAddNote);
+  }, []);
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
   };
@@ -22,7 +28,7 @@ const App = () => {
   const handleLogout = () => {
     clearAuth();
     setSearchResults(null);
-    setActiveSection("subjects");
+    setActiveSection("dashboard");
     setIsAuthenticated(false);
   };
 
@@ -69,3 +75,5 @@ const App = () => {
 };
 
 export default App;
+
+

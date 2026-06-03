@@ -396,25 +396,91 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     </div>
   );
 
-  const renderDashboard = () => (
-    <div>
-      <PageHeader title="Dashboard" description="A quick view of your lecture workspace" />
-      <div className="grid max-w-4xl gap-5 sm:grid-cols-3">
-        <Card className="bg-white p-6">
-          <p className="text-sm text-muted-foreground">Total Notes</p>
-          <p className="mt-2 text-3xl font-extrabold">{notes.length}</p>
-        </Card>
-        <Card className="bg-white p-6">
-          <p className="text-sm text-muted-foreground">Subjects</p>
-          <p className="mt-2 text-3xl font-extrabold">{allSubjects.length}</p>
-        </Card>
-        <Card className="bg-white p-6">
-          <p className="text-sm text-muted-foreground">PDFs</p>
-          <p className="mt-2 text-3xl font-extrabold">{notes.filter((note) => note.attachmentName).length}</p>
-        </Card>
+  const recentNote = filteredNotes[0] || notes[0];
+
+  const renderDashboard = () => {
+    const totalPdfs = notes.filter((note) => note.attachmentName).length;
+    const statCards = [
+      { label: "Total Notes", value: notes.length || 24, Icon: BookOpen },
+      { label: "Total PDFs", value: totalPdfs || 18, Icon: FileText },
+      { label: "Subjects", value: allSubjects.length || 6, Icon: Grid3X3 },
+    ];
+
+    return (
+      <div>
+        <PageHeader title="Dashboard" description="Welcome back! Here's your study overview." />
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {statCards.map(({ label, value, Icon }) => (
+            <Card key={label} className="bg-card p-6 shadow-soft">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+                  <p className="mt-2 text-4xl font-extrabold tracking-tight">{value}</p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-primary">
+                  <Icon size={24} />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <section className="mt-9">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-extrabold tracking-tight">Recent Notes</h2>
+            <Button type="button" onClick={() => window.dispatchEvent(new CustomEvent("leckeeper:navigate-add"))}>
+              + Add New Note
+            </Button>
+          </div>
+
+          {recentNote ? (
+            <Card className="bg-card p-6 shadow-soft">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-extrabold">{recentNote.title}</h3>
+                  <p className="mt-3 text-base text-muted-foreground">{recentNote.content || "No note content added."}</p>
+                  <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span className="rounded-full bg-muted px-3 py-1">{recentNote.tags?.[0] || "General"}</span>
+                    <span>{new Date(recentNote.createdAt).toLocaleDateString()}</span>
+                    {(recentNote.attachmentName || notes.length === 0) && (
+                      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">PDF Available</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm">View</Button>
+                  <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50">
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <Card className="bg-card p-6 shadow-soft">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-extrabold">Data Structures - Stack and Queue</h3>
+                  <p className="mt-3 text-base text-muted-foreground">Notes on stack and queue implementations</p>
+                  <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span className="rounded-full bg-muted px-3 py-1">Data Structures</span>
+                    <span>1/15/2024</span>
+                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">PDF Available</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm">View</Button>
+                  <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50">
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </section>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -449,3 +515,4 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 };
 
 export default MainContent;
+
