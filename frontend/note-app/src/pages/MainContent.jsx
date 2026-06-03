@@ -207,78 +207,131 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const renderAddNote = () => (
     <div className="max-w-3xl">
-      <PageHeader title="Add Note" description="Create a lecture note with subject and optional PDF." />
-      <Card className="bg-white p-6">
-        <form onSubmit={handleCreateNote} className="space-y-5">
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold">Lecture title</span>
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight">Add New Note</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Create a new lecture note with optional PDF attachment</p>
+      </div>
+
+      <form onSubmit={handleCreateNote} className="space-y-5">
+        <Card className="bg-card p-6 shadow-none">
+          <label className="block space-y-3">
+            <span className="text-sm font-bold">Note Title *</span>
             <Input
               value={newNote.title}
               onChange={(event) => setNewNote((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="e.g. Stack and Queue"
+              placeholder="e.g., Data Structures - Stack and Queue"
               required
+              className="bg-white"
             />
           </label>
+        </Card>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold">Subject</span>
+        <div className="grid gap-5 md:grid-cols-2">
+          <Card className="bg-card p-6 shadow-none">
+            <label className="block space-y-3">
+              <span className="text-sm font-bold">Subject *</span>
+              <select
+                value={newNote.subject}
+                onChange={(event) => setNewNote((prev) => ({ ...prev, subject: event.target.value }))}
+                required
+                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Select a subject</option>
+                {allSubjects.map((subject) => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </label>
+          </Card>
+
+          <Card className="bg-card p-6 shadow-none">
+            <label className="block space-y-3">
+              <span className="text-sm font-bold">Semester *</span>
+              <select
+                required
+                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                defaultValue=""
+              >
+                <option value="" disabled>Select a semester</option>
+                <option>Semester 1</option>
+                <option>Semester 2</option>
+                <option>Semester 3</option>
+                <option>Semester 4</option>
+              </select>
+            </label>
+          </Card>
+        </div>
+
+        <Card className="bg-card p-6 shadow-none">
+          <label className="block space-y-3">
+            <span className="text-sm font-bold">Category *</span>
             <select
-              value={newNote.subject}
-              onChange={(event) => setNewNote((prev) => ({ ...prev, subject: event.target.value }))}
               required
               className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              defaultValue=""
             >
-              <option value="">Select subject</option>
-              {allSubjects.map((subject) => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
+              <option value="" disabled>Select a category</option>
+              <option>Lecture</option>
+              <option>Tutorial</option>
+              <option>Assignment</option>
+              <option>Exam Notes</option>
             </select>
           </label>
+        </Card>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold">Extra tags</span>
-            <CreatableReactSelect
-              isMulti
-              placeholder="Tutorial, Important..."
-              value={selectedTags}
-              onChange={setSelectedTags}
-              options={subjectOptions}
-              classNamePrefix="select"
-            />
-          </label>
-
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold">Short note</span>
+        <Card className="bg-card p-6 shadow-none">
+          <label className="block space-y-3">
+            <span className="text-sm font-bold">Note Content *</span>
             <Textarea
               value={newNote.content}
               onChange={(event) => setNewNote((prev) => ({ ...prev, content: event.target.value }))}
-              placeholder="Write the key lecture points here..."
-              rows={6}
+              placeholder="Write your note content here..."
+              rows={7}
               required
+              className="bg-white"
             />
           </label>
+        </Card>
 
-          <div className="space-y-2">
-            <span className="text-sm font-semibold">Lecture PDF</span>
+        <Card className="bg-card p-6 shadow-none">
+          <div className="space-y-4">
+            <span className="text-sm font-bold">Upload PDF (Optional)</span>
             {pdfFileName ? (
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted p-3">
-                <span className="truncate text-sm font-semibold">{pdfFileName}</span>
+              <div className="flex items-center justify-between rounded-lg border border-border bg-white p-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold">{pdfFileName}</p>
+                  <p className="text-xs text-muted-foreground">PDF file selected</p>
+                </div>
                 <Button type="button" variant="ghost" size="icon" onClick={() => setPdfFileName("") }>
                   <X size={16} />
                 </Button>
               </div>
             ) : (
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted p-5 text-sm font-semibold hover:bg-secondary">
-                <Upload size={18} />
-                Choose PDF
+              <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white text-center hover:bg-muted">
+                <Upload className="mb-3 text-muted-foreground" size={24} />
+                <span className="text-sm font-semibold">Click to upload or drag and drop</span>
+                <span className="mt-1 text-xs text-muted-foreground">PDF files only</span>
                 <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleFileChange} />
               </label>
             )}
           </div>
+        </Card>
 
-          <Button type="submit" className="px-7">Save Note</Button>
-        </form>
-      </Card>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button type="submit">Save Note</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setNewNote({ title: "", subject: "", content: "" });
+              setSelectedTags([]);
+              setPdfFileName("");
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
     </div>
   );
 
@@ -515,4 +568,5 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 };
 
 export default MainContent;
+
 
