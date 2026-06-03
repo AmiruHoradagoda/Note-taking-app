@@ -32,7 +32,8 @@ public class NoteService {
     }
 
     public NoteResponseDto getNoteById(String id) {
-        Note note = noteRepository.findById(id).orElse(null);
+        Note note = noteRepository.findById(id)
+                .orElseThrow(() -> new NoteNotFoundException("Note not found with id: " + id));
         return noteMapper.toNoteResponseDto(note);
     }
 
@@ -52,7 +53,9 @@ public class NoteService {
         // Map the incoming DTO to the entity and update fields
         existingNote.setTitle(noteRequestDto.getTitle());
         existingNote.setContent(noteRequestDto.getContent());
-        existingNote.setCreatedAt(LocalDateTime.now());
+        if (noteRequestDto.getUserId() != null && !noteRequestDto.getUserId().isBlank()) {
+            existingNote.setUserId(noteRequestDto.getUserId());
+        }
         existingNote.setTags(noteRequestDto.getTags());
 
         // Save the updated note
@@ -64,6 +67,9 @@ public class NoteService {
 
 
     public void deleteNote(String id) {
+        if (!noteRepository.existsById(id)) {
+            throw new NoteNotFoundException("Note not found with id: " + id);
+        }
         noteRepository.deleteById(id);
     }
 

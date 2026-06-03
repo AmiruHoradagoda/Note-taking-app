@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import CreatableReactSelect from "react-select/creatable";
-const API_BASE_URL = "/api/v1";
+import { apiFetch } from "../utils/api";
+
 // Utility function to generate a color based on the tag name
 const generateTagColor = (tag) => {
   const colors = [
@@ -28,35 +29,33 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   const [editedNote, setEditedNote] = useState(note);
   const [error, setError] = useState("");
   const [selectedTags, setSelectedTags] = useState(
-    note.tags.map((tag) => ({ label: tag, value: tag }))
+    (note.tags || []).map((tag) => ({ label: tag, value: tag }))
   );
+
+  useEffect(() => {
+    setEditedNote(note);
+    setSelectedTags(
+      (note.tags || []).map((tag) => ({ label: tag, value: tag }))
+    );
+  }, [note]);
 
   const handleUpdate = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/notes/${note.id}`, {
+      const updatedNote = await apiFetch(`/notes/${note.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
+        body: {
           title: editedNote.title,
           content: editedNote.content,
           userId: editedNote.userId,
-          tags: selectedTags.map((tag) => tag.value),
-        }),
+          tags: (selectedTags || []).map((tag) => tag.value),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update note");
-      }
-
-      const updatedNote = await response.json();
       onNoteUpdate(updatedNote);
       setIsEditing(false);
       setError("");
     } catch (err) {
-      setError("Failed to update note");
+      setError(err.message || "Failed to update note");
       console.error("Update error:", err);
     }
   };
@@ -64,23 +63,25 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this note?")) {
       try {
-        const response = await fetch(`${API_BASE_URL}/notes/${note.id}`, {
+        await apiFetch(`/notes/${note.id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
         });
-
-        if (!response.ok) {
-          throw new Error("Failed to delete note");
-        }
 
         onNoteDelete(note.id);
       } catch (err) {
-        setError("Failed to delete note");
+        setError(err.message || "Failed to delete note");
         console.error("Delete error:", err);
       }
     }
+  };
+
+  const handleCancel = () => {
+    setEditedNote(note);
+    setSelectedTags(
+      (note.tags || []).map((tag) => ({ label: tag, value: tag }))
+    );
+    setError("");
+    setIsEditing(false);
   };
 
   if (isEditing) {
@@ -115,7 +116,7 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
         />
         <div className="flex justify-end mt-2 space-x-2">
           <button
-            onClick={() => setIsEditing(false)}
+            onClick={handleCancel}
             className="px-3 py-1 text-gray-600 border border-gray-300 rounded hover:text-gray-800"
           >
             Cancel

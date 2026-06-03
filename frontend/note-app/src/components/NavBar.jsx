@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from "react";
-const API_BASE_URL = "/api/v1";
+import { apiFetch, getUserId } from "../utils/api";
+
 const NavBar = ({ onLogout, onSearch }) => {
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchUser = async () => {
-      const userId = localStorage.getItem("userId");
+      const userId = getUserId();
       if (userId) {
         try {
-          const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          });
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          }
+          const userData = await apiFetch(`/users/${userId}`);
+          setUser(userData);
         } catch (error) {
           console.error("Failed to fetch user data:", error);
         }
@@ -29,7 +23,7 @@ const NavBar = ({ onLogout, onSearch }) => {
   const handleSearch = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    const userId = localStorage.getItem("userId");
+    const userId = getUserId();
     if (userId) {
       onSearch(userId, query);
     }

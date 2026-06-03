@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Eye } from "lucide-react";
-const API_BASE_URL = "/api/v1";
+import { apiFetch } from "../utils/api";
 
 const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
-  
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -34,39 +33,29 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
     }
 
     try {
-      const endpoint = isLogin
-        ? `${API_BASE_URL}/auth/login`
-        : `${API_BASE_URL}/auth/register`;
-      const response = await fetch(endpoint, {
+      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      const data = await apiFetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,
+        body: {
+          username: formData.username.trim(),
           password: formData.password,
-        }),
+        },
       });
 
-      const data = await response.json();
-      console.log("Auth response:", data); 
-      if (response.ok) {
+      if (data?.token && data?.userId) {
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userId", data.userId); 
+        localStorage.setItem("userId", data.userId);
         if (isLogin) {
           onLoginSuccess?.();
         } else {
           onRegisterSuccess?.();
         }
       } else {
-        setError(
-          data.message || `${isLogin ? "Login" : "Registration"} failed`
-        );
+        setError("Authentication response did not include a token and user ID.");
       }
     } catch (err) {
       console.error("Auth error details:", err);
-      setError("Failed to connect to the server");
+      setError(err.message || "Failed to connect to the server");
     } finally {
       setIsLoading(false);
     }

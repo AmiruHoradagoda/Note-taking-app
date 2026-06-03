@@ -1,53 +1,66 @@
 import { useState } from "react";
+import {
+  Archive,
+  Bell,
+  FileText,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Tag,
+  Trash2,
+} from "lucide-react";
+
+const menuItems = [
+  { label: "Notes", Icon: FileText },
+  { label: "Reminders", Icon: Bell },
+  { label: "Edit Labels", Icon: Tag },
+  { label: "Archive", Icon: Archive },
+  { label: "Trash", Icon: Trash2 },
+];
 
 const SideBar = () => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const ToggleIcon = isOpen ? PanelLeftClose : PanelLeftOpen;
 
   return (
     <>
-      {/* Toggle Button - Fixed to the left side */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed left-0 z-30 p-2 text-white bg-yellow-500 rounded-r-lg top-20 hover:bg-yellow-600 focus:outline-none"
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="fixed left-0 z-30 p-2 text-white bg-yellow-500 rounded-r-lg top-20 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+        aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
+        aria-expanded={isOpen}
       >
-        {isOpen ? "◀" : "▶"}
+        <ToggleIcon size={20} />
       </button>
 
-      {/* Sidebar Container */}
-      <div
+      <aside
         className={`fixed left-0 top-16 h-full bg-gray-100 p-4 shadow-md transition-all duration-300 ease-in-out z-20 ${
           isOpen ? "w-60" : "w-0 -translate-x-full"
         }`}
       >
-        {/* Sidebar Content */}
         <div
-          className={`${
+          className={`space-y-1 ${
             isOpen ? "opacity-100" : "opacity-0"
           } transition-opacity duration-300`}
         >
-          <button className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200">
-            <span>📝</span> Notes
-          </button>
-          <button className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200">
-            <span>⏰</span> Reminders
-          </button>
-          <button className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200">
-            <span>🏷️</span> Edit Labels
-          </button>
-          <button className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200">
-            <span>📦</span> Archive
-          </button>
-          <button className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200">
-            <span>🗑️</span> Trash
-          </button>
+          {menuItems.map(({ label, Icon }) => (
+            <button
+              key={label}
+              type="button"
+              className="flex items-center w-full gap-2 px-4 py-2 text-left rounded-lg hover:bg-gray-200"
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
         </div>
-      </div>
+      </aside>
 
-      {/* Overlay for mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 z-10 bg-black bg-opacity-50 lg:hidden"
           onClick={() => setIsOpen(false)}
+          aria-hidden="true"
         />
       )}
     </>

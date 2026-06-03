@@ -1,0 +1,5 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/noteApp}
+      database: ${MONGODB_DATABASE:noteApp}

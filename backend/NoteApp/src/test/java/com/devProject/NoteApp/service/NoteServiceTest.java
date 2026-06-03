@@ -105,7 +105,7 @@ class NoteServiceTest {
         when(noteRepository.findById(NOTE_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertNull(noteService.getNoteById(NOTE_ID));
+        assertThrows(NoteNotFoundException.class, () -> noteService.getNoteById(NOTE_ID));
         verify(noteRepository).findById(NOTE_ID);
     }
 
@@ -161,13 +161,26 @@ class NoteServiceTest {
     @Test
     void deleteNoteTest() {
         // Arrange
+        when(noteRepository.existsById(NOTE_ID)).thenReturn(true);
         doNothing().when(noteRepository).deleteById(NOTE_ID);
 
         // Act
         noteService.deleteNote(NOTE_ID);
 
         // Assert
+        verify(noteRepository).existsById(NOTE_ID);
         verify(noteRepository).deleteById(NOTE_ID);
+    }
+
+    @Test
+    void deleteNoteNotFoundTest() {
+        // Arrange
+        when(noteRepository.existsById(NOTE_ID)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(NoteNotFoundException.class, () -> noteService.deleteNote(NOTE_ID));
+        verify(noteRepository).existsById(NOTE_ID);
+        verify(noteRepository, never()).deleteById(anyString());
     }
 
     @Test

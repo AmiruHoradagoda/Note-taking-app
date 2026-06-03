@@ -1,7 +1,20 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CreatableReactSelect from "react-select/creatable";
 import NoteComponent from "../components/NoteComponent";
-const API_BASE_URL = "/api/v1";
+import { apiFetch, getUserId } from "../utils/api";
+
+const sanitizeNote = (note) => ({
+  id: note?.id || `temp-${Date.now()}-${Math.random()}`,
+  title: note?.title || "",
+  content: note?.content || "",
+  createdAt: note?.createdAt || new Date().toISOString(),
+  userId: note?.userId || "",
+  tags: Array.isArray(note?.tags) ? note.tags : [],
+});
+
+const sanitizeNotes = (noteList) =>
+  Array.isArray(noteList) ? noteList.map(sanitizeNote) : [];
+
 const MainContent = ({ searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,46 +27,17 @@ const MainContent = ({ searchResults }) => {
     userId: "",
   });
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-  };
-
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
+    setLoading(true);
     try {
-      const userId = localStorage.getItem("userId");
-      console.log("Current userId:", userId);
+      const userId = getUserId();
       if (!userId) {
-        console.error("User ID not found in localStorage");
         setError("User ID not found. Please log in again.");
-        setLoading(false);
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/notes/user/${userId}`, {
-        headers: getAuthHeaders(),
-      });
-
-      if (response.status === 401) {
-        throw new Error("Session expired. Please login again.");
-      }
-      if (!response.ok) {
-        throw new Error("Failed to fetch notes");
-      }
-
-      const data = await response.json();
-      const sanitizedNotes = data.map((note) => ({
-        id: note?.id || `temp-${Date.now()}-${Math.random()}`,
-        title: note?.title || "",
-        content: note?.content || "",
-        createdAt: note?.createdAt || new Date().toISOString(),
-        userId: note?.userId || "",
-        tags: Array.isArray(note?.tags) ? note.tags : [],
-      }));
-      setNotes(sanitizedNotes);
+      const data = await apiFetch(`/notes/user/${userId}`);
+      setNotes(sanitizeNotes(data));
       setError("");
     } catch (err) {
       console.error("Fetch error:", err);
@@ -61,53 +45,41 @@ const MainContent = ({ searchResults }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchNotes();
   }, []);
 
   useEffect(() => {
     if (searchResults) {
-      const sanitizedResults = searchResults.map((note) => ({
-        id: note?.id || `temp-${Date.now()}-${Math.random()}`,
-        title: note?.title || "",
-        content: note?.content || "",
-        createdAt: note?.createdAt || new Date().toISOString(),
-        userId: note?.userId || "",
-        tags: Array.isArray(note?.tags) ? note.tags : [],
-      }));
-      setNotes(sanitizedResults);
+      setNotes(sanitizeNotes(searchResults));
+      setLoading(false);
     } else {
       fetchNotes();
     }
-  }, [searchResults]);
+  }, [fetchNotes, searchResults]);
 
   const handleCreateNote = async (e) => {
     e.preventDefault();
     try {
-      const userId = localStorage.getItem("userId");
-      const response = await fetch(`${API_BASE_URL}/notes`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          ...newNote,
-          userId,
-          tags: selectedTags.map((tag) => tag.value),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create note");
+      const userId = getUserId();
+      if (!userId) {
+        setError("User ID not found. Please log in again.");
+        return;
       }
 
-      const data = await response.json();
-      setNotes((prev) => [...prev, data]);
-      setNewNote({ title: "", content: "", tags: [], userId: "" });
+      const data = await apiFetch("/notes", {
+        method: "POST",
+        body: {
+          ...newNote,
+          userId,
+          tags: (selectedTags || []).map((tag) => tag.value),
+        },
+      });
+
+      setNotes((prev) => [sanitizeNote(data), ...prev]);
+      setNewNote({ title: "", content: "", tags: "", userId: "" });
       setSelectedTags([]);
       setError("");
     } catch (err) {
-      setError("Failed to create note");
+      setError(err.message || "Failed to create note");
       console.error("Create error:", err);
     }
   };
@@ -159,7 +131,7 @@ const MainContent = ({ searchResults }) => {
               isMulti
               className="w-1/3"
               placeholder="Add Tags"
-              value={selectedTags} // Should be selectedTags, not newNote.tags
+              value={selectedTags}
               onChange={setSelectedTags}
               classNamePrefix="select"
             />

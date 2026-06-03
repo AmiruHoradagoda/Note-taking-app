@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,34 +25,31 @@ public class UserService {
     private final AuthenticationManager authManager;
     private final UserRepo repo;
     private final UserMapper userMapper;
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private final PasswordEncoder encoder;
 
     @Autowired
-    public UserService(JWTService jwtService, AuthenticationManager authManager, UserRepo repo, UserMapper userMapper) {
+    public UserService(JWTService jwtService, AuthenticationManager authManager, UserRepo repo, UserMapper userMapper, PasswordEncoder encoder) {
         this.jwtService = jwtService;
         this.authManager = authManager;
         this.repo = repo;
         this.userMapper = userMapper;
+        this.encoder = encoder;
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
+        validateNewUser(request.getUsername(), request.getPassword());
+
         Users user = userMapper.toRegisterRequest(request);
         user.setPassword(encoder.encode(user.getPassword()));
 
-        try {
-            user = repo.save(user);
-            String token = jwtService.generateToken(user.getUsername());
-            return AuthenticationResponse.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .token(token)
-                    .message("User registered successfully")
-                    .build();
-        } catch (Exception e) {
-            return AuthenticationResponse.builder()
-                    .message("Registration failed")
-                    .build();
-        }
+        user = repo.save(user);
+        String token = jwtService.generateToken(user.getUsername());
+        return AuthenticationResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .token(token)
+                .message("User registered successfully")
+                .build();
     }
 
     public AuthenticationResponse verify(UserRequestDto user) {
@@ -98,23 +95,53 @@ public class UserService {
     public UserResponseDto getUserById(String id) {
         return repo.findById(id)
                 .map(userMapper::toUserResponseDto)
-                .orElse(null);
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
     }
 
     public UserResponseDto createUser(Users user) {
+        validateNewUser(user.getUsername(), user.getPassword());
+        user.setPassword(encoder.encode(user.getPassword()));
         Users savedUser = repo.save(user);
         return userMapper.toUserResponseDto(savedUser);
     }
 
     public UserResponseDto updateUser(String id, Users user) {
-        user.setId(id);
-        Users updatedUser = repo.save(user);
+        Users existingUser = repo.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            Users sameUsernameUser = repo.findByUsername(user.getUsername());
+            if (sameUsernameUser != null && !sameUsernameUser.getId().equals(id)) {
+                throw new IllegalArgumentException("Username is already taken");
+            }
+            existingUser.setUsername(user.getUsername());
+        }
+
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            existingUser.setPassword(encoder.encode(user.getPassword()));
+        }
+
+        Users updatedUser = repo.save(existingUser);
         return userMapper.toUserResponseDto(updatedUser);
     }
 
     public void deleteUser(String id) {
+        if (!repo.existsById(id)) {
+            throw new UserNotFoundException("User not found with id: " + id);
+        }
         repo.deleteById(id);
     }
 
+    private void validateNewUser(String username, String password) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        if (repo.findByUsername(username) != null) {
+            throw new IllegalArgumentException("Username is already taken");
+        }
+    }
 
 }

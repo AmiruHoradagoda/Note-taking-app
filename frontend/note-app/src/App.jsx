@@ -3,7 +3,8 @@ import NavBar from "./components/NavBar";
 import SideBar from "./components/SideBar";
 import MainContent from "./pages/MainContent";
 import AuthForms from "./pages/AuthForms";
-const API_BASE_URL = "/api/v1";
+import { apiFetch, clearAuth, getUserId } from "./utils/api";
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
@@ -20,36 +21,30 @@ const App = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
+    clearAuth();
+    setSearchResults(null);
     setIsAuthenticated(false);
   };
 
- const handleSearch = async (userId, searchTxt) => {
-   if (!searchTxt.trim()) {
-     setSearchResults(null);
-     return;
-   }
+  const handleSearch = async (userId, searchTxt) => {
+    if (!searchTxt.trim()) {
+      setSearchResults(null);
+      return;
+    }
 
-   try {
-     const response = await fetch(
-       `${API_BASE_URL}/notes/search?userId=${userId}&searchTxt=${searchTxt}`,
-       {
-         headers: {
-           Authorization: `Bearer ${localStorage.getItem("token")}`,
-         },
-       }
-     );
-     if (response.ok) {
-       const data = await response.json();
-       setSearchResults(data);
-     } else {
-       console.error("Search failed with status:", response.status);
-     }
-   } catch (error) {
-     console.error("Search failed:", error);
-   }
- };
+    try {
+      const data = await apiFetch("/notes/search", {
+        params: {
+          userId: userId || getUserId(),
+          searchTxt,
+        },
+      });
+      setSearchResults(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setSearchResults([]);
+    }
+  };
 
   if (!isAuthenticated) {
     return (
