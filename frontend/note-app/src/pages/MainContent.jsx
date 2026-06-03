@@ -5,7 +5,6 @@ import {
   FileText,
   Grid3X3,
   NotebookPen,
-  Plus,
   Trash2,
   Upload,
   X,
@@ -19,7 +18,25 @@ import { Input } from "../components/ui/Input";
 import { Textarea } from "../components/ui/Textarea";
 import { apiFetch, getUserId } from "../utils/api";
 
-const defaultSubjects = ["Data Structures", "Programming Basics"];
+const semesters = Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`);
+
+const defaultSubjects = [
+  { name: "Data Structures", semester: "Semester 1" },
+  { name: "Programming Basics", semester: "Semester 1" },
+  { name: "Software Architecture", semester: "Semester 2" },
+  { name: "Web Development", semester: "Semester 2" },
+  { name: "Database Systems", semester: "Semester 3" },
+  { name: "Cloud Computing", semester: "Semester 3" },
+];
+
+const demoSubjectCounts = {
+  "Data Structures": { notes: 4, pdfs: 3 },
+  "Programming Basics": { notes: 3, pdfs: 3 },
+  "Software Architecture": { notes: 3, pdfs: 3 },
+  "Web Development": { notes: 3, pdfs: 2 },
+  "Database Systems": { notes: 3, pdfs: 3 },
+  "Cloud Computing": { notes: 3, pdfs: 2 },
+};
 
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
@@ -36,6 +53,29 @@ const sanitizeNotes = (noteList) =>
 
 const subjectStorageKey = () => `leckeeper-subjects-${getUserId() || "guest"}`;
 
+const normalizeSubject = (subject) => {
+  if (typeof subject === "string") {
+    return { name: subject.trim(), semester: "Semester 1" };
+  }
+
+  return {
+    name: subject?.name?.trim() || "",
+    semester: semesters.includes(subject?.semester) ? subject.semester : "Semester 1",
+  };
+};
+
+const uniqueSubjects = (items) => {
+  const byName = new Map();
+  items.map(normalizeSubject).forEach((subject) => {
+    if (subject.name && !byName.has(subject.name)) byName.set(subject.name, subject);
+  });
+  return [...byName.values()].sort((a, b) =>
+    a.semester === b.semester
+      ? a.name.localeCompare(b.name)
+      : semesters.indexOf(a.semester) - semesters.indexOf(b.semester)
+  );
+};
+
 const uniqueValues = (items) =>
   [...new Set(items.map((item) => item.trim()).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b)
@@ -50,6 +90,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [error, setError] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [newSubjectName, setNewSubjectName] = useState("");
+  const [newSubjectSemester, setNewSubjectSemester] = useState("Semester 1");
   const [pdfFileName, setPdfFileName] = useState("");
   const [newNote, setNewNote] = useState({ title: "", subject: "", content: "" });
 
@@ -75,7 +116,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   useEffect(() => {
     const savedSubjects = JSON.parse(localStorage.getItem(subjectStorageKey()) || "[]");
-    setSubjects(uniqueValues([...defaultSubjects, ...savedSubjects]));
+    setSubjects(uniqueSubjects([...defaultSubjects, ...savedSubjects]));
   }, []);
 
   useEffect(() => {
@@ -87,14 +128,19 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     }
   }, [fetchNotes, searchResults]);
 
-  const noteSubjects = useMemo(
+  const noteSubjectNames = useMemo(
     () => uniqueValues(notes.flatMap((note) => note.tags || [])),
     [notes]
   );
 
+  const allSubjectRecords = useMemo(
+    () => uniqueSubjects([...subjects, ...noteSubjectNames.map((name) => ({ name, semester: "Semester 1" }))]),
+    [subjects, noteSubjectNames]
+  );
+
   const allSubjects = useMemo(
-    () => uniqueValues([...subjects, ...noteSubjects]),
-    [subjects, noteSubjects]
+    () => allSubjectRecords.map((subject) => subject.name),
+    [allSubjectRecords]
   );
 
   const subjectOptions = useMemo(
@@ -109,17 +155,21 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const subjectCards = useMemo(
     () =>
-      allSubjects.map((subject) => ({
-        name: subject,
-        notes: notes.filter((note) => note.tags?.includes(subject)).length,
-        pdfs: notes.filter((note) => note.tags?.includes(subject) && note.attachmentName).length,
-        canRemove: subjects.includes(subject),
-      })),
-    [allSubjects, notes, subjects]
+      allSubjectRecords.map((subject) => {
+        const realNotes = notes.filter((note) => note.tags?.includes(subject.name));
+        const demo = demoSubjectCounts[subject.name] || { notes: 0, pdfs: 0 };
+        return {
+          ...subject,
+          notes: realNotes.length || demo.notes,
+          pdfs: realNotes.filter((note) => note.attachmentName).length || demo.pdfs,
+          canRemove: subjects.some((item) => item.name === subject.name),
+        };
+      }),
+    [allSubjectRecords, notes, subjects]
   );
 
   const saveSubjects = (nextSubjects) => {
-    const cleaned = uniqueValues(nextSubjects);
+    const cleaned = uniqueSubjects(nextSubjects);
     setSubjects(cleaned);
     localStorage.setItem(subjectStorageKey(), JSON.stringify(cleaned));
   };
@@ -128,14 +178,15 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     event.preventDefault();
     if (!newSubjectName.trim()) return;
 
-    saveSubjects([...subjects, newSubjectName]);
+    saveSubjects([...subjects, { name: newSubjectName, semester: newSubjectSemester }]);
     setNewSubjectName("");
+    setNewSubjectSemester("Semester 1");
     setShowSubjectForm(false);
     setError("");
   };
 
   const handleRemoveSubject = (subject) => {
-    saveSubjects(subjects.filter((item) => item !== subject));
+    saveSubjects(subjects.filter((item) => item.name !== subject));
     if (selectedSubjectFilter === subject) setSelectedSubjectFilter("all");
   };
 
@@ -173,7 +224,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         },
       });
 
-      if (subject) saveSubjects([...subjects, subject]);
+      if (subject) saveSubjects([...subjects, { name: subject, semester: "Semester 1" }]);
       setNotes((prev) => [sanitizeNote({ ...data, attachmentName: pdfFileName }), ...prev]);
       setNewNote({ title: "", subject: "", content: "" });
       setSelectedTags([]);
@@ -187,7 +238,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const handleNoteUpdate = (updatedNote) => {
     const cleanNote = sanitizeNote(updatedNote);
-    saveSubjects([...subjects, ...(cleanNote.tags || [])]);
+    saveSubjects([
+      ...subjects,
+      ...(cleanNote.tags || []).map((name) => ({ name, semester: "Semester 1" })),
+    ]);
     setNotes((prev) => prev.map((note) => (note.id === cleanNote.id ? cleanNote : note)));
   };
 
@@ -253,10 +307,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                 defaultValue=""
               >
                 <option value="" disabled>Select a semester</option>
-                <option>Semester 1</option>
-                <option>Semester 2</option>
-                <option>Semester 3</option>
-                <option>Semester 4</option>
+                {semesters.map((semester) => <option key={semester}>{semester}</option>)}
               </select>
             </label>
           </Card>
@@ -335,77 +386,119 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     </div>
   );
 
+  const renderSubjectCard = (subject) => (
+    <Card key={subject.name} className="flex min-h-56 flex-col bg-card p-6 shadow-soft">
+      <div className="mb-10 flex items-start justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary">
+          <BookOpen size={20} />
+        </div>
+        <div className="flex gap-3 text-muted-foreground">
+          <button type="button" className="hover:text-primary" title="Edit subject">
+            <Edit size={15} />
+          </button>
+          {subject.canRemove && (
+            <button type="button" className="hover:text-destructive" title="Delete subject" onClick={() => handleRemoveSubject(subject.name)}>
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <h3 className="text-base font-extrabold">{subject.name}</h3>
+
+      <div className="mt-auto space-y-3 border-t border-border pt-5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-2 text-muted-foreground">
+            <NotebookPen size={13} />
+            Notes
+          </span>
+          <span className="text-sm font-extrabold">{subject.notes}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-2 text-muted-foreground">
+            <FileText size={13} />
+            PDFs
+          </span>
+          <span className="text-sm font-extrabold">{subject.pdfs}</span>
+        </div>
+      </div>
+    </Card>
+  );
+
   const renderSubjects = () => (
     <div>
-      <PageHeader
-        title="Subjects"
-        description="Organize your subjects by semester"
-        action={
-          <Button type="button" onClick={() => setShowSubjectForm((prev) => !prev)}>
-            <Plus size={18} />
-            New Subject
-          </Button>
-        }
-      />
+      <div className="mb-9 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Subjects</h1>
+          <p className="mt-2 text-base text-muted-foreground">Organize your subjects by semester</p>
+        </div>
+        <Button type="button" onClick={() => setShowSubjectForm((prev) => !prev)}>
+          + New Subject
+        </Button>
+      </div>
 
       {showSubjectForm && (
-        <Card className="mb-8 max-w-xl bg-white p-5">
-          <form onSubmit={handleAddSubject} className="flex gap-3">
-            <Input
-              value={newSubjectName}
-              onChange={(event) => setNewSubjectName(event.target.value)}
-              placeholder="Subject name"
-            />
-            <Button type="submit">Add</Button>
+        <Card className="mb-8 bg-card p-6 shadow-none">
+          <h2 className="mb-5 text-base font-extrabold">Create New Subject</h2>
+          <form onSubmit={handleAddSubject} className="space-y-4">
+            <label className="block space-y-2">
+              <span className="text-xs font-bold">Subject Name</span>
+              <Input
+                value={newSubjectName}
+                onChange={(event) => setNewSubjectName(event.target.value)}
+                placeholder="e.g., Advanced Algorithms"
+                className="bg-white"
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-bold">Semester</span>
+              <select
+                value={newSubjectSemester}
+                onChange={(event) => setNewSubjectSemester(event.target.value)}
+                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                {semesters.map((semester) => <option key={semester}>{semester}</option>)}
+              </select>
+            </label>
+            <div className="flex gap-3">
+              <Button type="submit" size="sm">Create Subject</Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setNewSubjectName("");
+                  setNewSubjectSemester("Semester 1");
+                  setShowSubjectForm(false);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
           </form>
         </Card>
       )}
 
-      <section>
-        <h2 className="text-2xl font-extrabold">Semester 1</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{subjectCards.length} subjects</p>
-
-        <div className="mt-5 grid max-w-5xl gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {subjectCards.map((subject) => (
-            <Card key={subject.name} className="min-h-64 bg-card p-6 shadow-soft">
-              <div className="mb-12 flex items-start justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-primary">
-                  <BookOpen size={22} />
+      <div className="space-y-9">
+        {semesters.map((semester) => {
+          const cards = subjectCards.filter((subject) => subject.semester === semester);
+          return (
+            <section key={semester}>
+              <h2 className="text-xl font-extrabold">{semester}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">{cards.length} subjects</p>
+              {cards.length > 0 ? (
+                <div className="mt-4 grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-2">
+                  {cards.map(renderSubjectCard)}
                 </div>
-                <div className="flex gap-3 text-muted-foreground">
-                  <button type="button" className="hover:text-primary" title="Edit subject">
-                    <Edit size={17} />
-                  </button>
-                  {subject.canRemove && (
-                    <button type="button" className="hover:text-destructive" title="Delete subject" onClick={() => handleRemoveSubject(subject.name)}>
-                      <Trash2 size={17} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <h3 className="text-xl font-extrabold">{subject.name}</h3>
-
-              <div className="mt-10 space-y-4 border-t border-border pt-5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <NotebookPen size={16} />
-                    Notes
-                  </span>
-                  <span className="text-lg font-extrabold">{subject.notes}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <FileText size={16} />
-                    PDFs
-                  </span>
-                  <span className="text-lg font-extrabold">{subject.pdfs}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
+              ) : (
+                <Card className="mt-4 max-w-6xl bg-white p-5 text-sm text-muted-foreground shadow-none">
+                  No subjects yet.
+                </Card>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 
