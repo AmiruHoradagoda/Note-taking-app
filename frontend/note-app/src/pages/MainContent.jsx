@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
   BookOpen,
   Calendar,
   Edit,
   Eye,
   FileText,
+  Folder,
   Grid3X3,
+  ImageIcon,
+  Link as LinkIcon,
   NotebookPen,
   Plus,
   RefreshCw,
@@ -100,12 +104,12 @@ const dummyNotes = [
 ];
 
 const dummyNoteMeta = {
-  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", attachmentName: "eTicket_352453516943912.pdf" },
-  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", attachmentName: "M0195.pdf" },
-  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", attachmentName: "EDDS Basic User Support - ISD.pdf" },
-  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", attachmentName: "" },
-  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", attachmentName: "cloud-deployment-checklist.pdf" },
-  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", attachmentName: "" },
+  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", attachmentName: "eTicket_352453516943912.pdf", images: ["stack-queue-diagram.png", "lab-whiteboard.jpg"] },
+  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", attachmentName: "M0195.pdf", images: ["flowchart-example.png"] },
+  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", attachmentName: "EDDS Basic User Support - ISD.pdf", images: ["support-workflow.png", "isd-architecture.jpg"] },
+  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", attachmentName: "", images: ["normalization-table.png"] },
+  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", attachmentName: "cloud-deployment-checklist.pdf", images: ["deployment-pipeline.png"] },
+  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", attachmentName: "", images: ["component-tree.png", "state-props-sketch.jpg"] },
 };
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
@@ -157,12 +161,16 @@ const formatDate = (value) => {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
+const displayFileName = (fileName) => fileName.replace(/\.[^/.]+$/, "");
+
 const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [noteMeta, setNoteMeta] = useState({});
   const [filters, setFilters] = useState({ semester: "all", subject: "all", category: "all", pdf: "all" });
   const [subjectSemesterFilter, setSubjectSemesterFilter] = useState("all");
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [showReferDialog, setShowReferDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -260,6 +268,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       semester: meta.semester || subjectSemester(subject),
       category: meta.category || "Lecture",
       attachmentName: meta.attachmentName || note.attachmentName || "",
+      images: Array.isArray(meta.images) ? meta.images : [],
     };
   };
 
@@ -382,9 +391,21 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const handleNoteDelete = (noteId) => {
     setNotes((prev) => prev.filter((note) => note.id !== noteId));
+    if (selectedNote?.id === noteId) setSelectedNote(null);
     const nextMeta = { ...noteMeta };
     delete nextMeta[noteId];
     saveNoteMeta(nextMeta);
+  };
+
+  const getFolderResources = (note) => {
+    const pdfs = note.attachmentName ? [note.attachmentName] : [];
+    const images = note.images || [];
+    return {
+      pdfs,
+      images,
+      noteItems: note.content ? ["Lecture summary"] : [],
+      total: pdfs.length + images.length + (note.content ? 1 : 0),
+    };
   };
 
   const PageHeader = ({ title, description, action }) => (
@@ -647,35 +668,171 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     </div>
   );
 
-  const renderDocumentCard = (note) => (
-    <Card key={note.id} className="bg-white p-4 text-center shadow-soft transition hover:-translate-y-0.5">
-      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-xl bg-muted">
-        {note.attachmentName ? (
-          <div className="relative">
-            <FileText className="text-red-600" size={42} />
-            <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white">PDF</span>
+  const renderFolderCard = (note) => {
+    return (
+      <Card key={note.id} className="bg-white p-5 shadow-soft transition hover:-translate-y-0.5">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-primary">
+            <Folder size={38} fill="currentColor" strokeWidth={1.5} />
           </div>
-        ) : (
-          <NotebookPen className="text-primary" size={38} />
+        </div>
+
+        <h3 className="line-clamp-2 min-h-11 text-lg font-extrabold">{note.title}</h3>
+        <p className="mt-3 text-sm text-muted-foreground">{formatDate(note.createdAt)}</p>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-sm">
+          <Badge variant="secondary">{note.subject}</Badge>
+          <Badge variant="outline">{note.semester}</Badge>
+          <Badge variant="outline">{note.category}</Badge>
+        </div>
+
+        <div className="mt-7 flex justify-center gap-3">
+          <Button type="button" variant="outline" size="sm" onClick={() => setSelectedNote(note)}>
+            <Eye size={14} /> View Folder
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50" onClick={() => handleNoteDelete(note.id)}>
+            <Trash2 size={14} />
+          </Button>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderResourceTile = ({ icon, title, date }) => (
+    <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-border bg-white p-4 text-center shadow-sm">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center">
+        {icon}
+      </div>
+      <h4 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5">{title}</h4>
+      <p className="mt-3 text-xs text-muted-foreground">{date}</p>
+    </div>
+  );
+
+  const renderFolderView = (note) => {
+    const resources = getFolderResources(note);
+    return (
+      <div>
+        <button
+          type="button"
+          className="mb-6 flex items-center gap-2 text-sm font-bold text-primary"
+          onClick={() => setSelectedNote(null)}
+        >
+          <ArrowLeft size={17} /> Back to folders
+        </button>
+
+        <Card className="mb-6 bg-card p-6 shadow-soft">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div className="flex gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary">
+                <Folder size={48} fill="currentColor" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight">{note.title}</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This note folder contains the written note, lecture PDFs, images, and reference instructions.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Badge variant="secondary">{note.subject}</Badge>
+                  <Badge variant="outline">{note.semester}</Badge>
+                  <Badge variant="outline">{note.category}</Badge>
+                  <Badge variant="outline">{resources.total} items inside</Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div className="space-y-6">
+          <section className="space-y-6">
+            <Card className="bg-white p-6 shadow-soft">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <NotebookPen className="text-primary" size={22} />
+                  <h2 className="text-xl font-extrabold">Note About This Folder</h2>
+                </div>
+                <Button type="button" variant="outline" onClick={() => setShowReferDialog(true)}>
+                  <LinkIcon size={16} /> How To Refer
+                </Button>
+              </div>
+              <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground">
+                {note.content || "No written note has been added yet. Use this area to summarize what the folder contains and what each resource is for."}
+              </p>
+            </Card>
+
+            <Card className="bg-white p-6 shadow-soft">
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <p className="text-sm font-semibold text-muted-foreground">{resources.total} documents found</p>
+                <button type="button" className="rounded-full p-2 text-muted-foreground hover:bg-muted" aria-label="Refresh folder">
+                  <RefreshCw size={18} />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {renderResourceTile({
+                  icon: <NotebookPen className="text-primary" size={38} />,
+                  title: "Written note",
+                  date: formatDate(note.createdAt),
+                })}
+
+                {resources.pdfs.length > 0 ? resources.pdfs.map((pdf) => renderResourceTile({
+                  icon: (
+                    <div className="relative">
+                      <FileText className="text-red-600" size={42} />
+                      <span className="absolute -top-1 left-1/2 -translate-x-1/2 rounded bg-red-600 px-1 py-0.5 text-[8px] font-bold text-white">PDF</span>
+                    </div>
+                  ),
+                  title: displayFileName(pdf),
+                  date: formatDate(note.createdAt),
+                })) : renderResourceTile({
+                  icon: <FileText className="text-muted-foreground" size={38} />,
+                  title: "No PDF uploaded",
+                  date: formatDate(note.createdAt),
+                })}
+
+                {resources.images.length > 0 ? resources.images.map((image) => renderResourceTile({
+                  icon: <ImageIcon className="text-primary" size={38} />,
+                  title: displayFileName(image),
+                  date: formatDate(note.createdAt),
+                })) : renderResourceTile({
+                  icon: <ImageIcon className="text-muted-foreground" size={38} />,
+                  title: "No images added",
+                  date: formatDate(note.createdAt),
+                })}
+              </div>
+            </Card>
+          </section>
+        </div>
+
+        {showReferDialog && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/35 p-4 backdrop-blur-md">
+            <Card className="w-full max-w-md bg-white p-6 shadow-2xl">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <LinkIcon className="text-primary" size={24} />
+                  <h2 className="text-xl font-extrabold">How To Refer</h2>
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setShowReferDialog(false)}>
+                  <X size={18} />
+                </Button>
+              </div>
+              <ol className="space-y-4 text-base leading-7 text-muted-foreground">
+                <li><strong className="text-foreground">1.</strong> Read the written note first for the short explanation.</li>
+                <li><strong className="text-foreground">2.</strong> Open the PDF for full lecture slides or handout details.</li>
+                <li><strong className="text-foreground">3.</strong> Check images for diagrams, screenshots, or visual examples.</li>
+                <li><strong className="text-foreground">4.</strong> Use subject, semester, and category badges to find related folders.</li>
+              </ol>
+            </Card>
+          </div>
         )}
       </div>
-      <h3 className="line-clamp-2 min-h-10 text-sm font-extrabold">{note.title}</h3>
-      <p className="mt-2 text-xs text-muted-foreground">{formatDate(note.createdAt)}</p>
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        <Badge variant="secondary">{note.subject}</Badge>
-        <Badge variant="outline">{note.category}</Badge>
-      </div>
-      <div className="mt-4 flex justify-center gap-2">
-        <Button type="button" variant="outline" size="sm"><Eye size={14} /> View</Button>
-        <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50" onClick={() => handleNoteDelete(note.id)}>
-          <Trash2 size={14} />
-        </Button>
-      </div>
-    </Card>
-  );
+    );
+  };
 
   const renderNotes = () => (
     <div>
+      {selectedNote ? (
+        renderFolderView(selectedNote)
+      ) : (
+      <>
       <PageHeader title="My Notes" description="Filter notes by semester, subject, category, and PDF availability" />
 
       <Card className="mb-6 bg-card p-5 shadow-none">
@@ -728,8 +885,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredNotes.map(renderDocumentCard)}
+          {filteredNotes.map(renderFolderCard)}
         </div>
+      )}
+      </>
       )}
     </div>
   );
