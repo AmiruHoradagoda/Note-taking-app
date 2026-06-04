@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
+  Calendar,
   Edit,
+  Eye,
   FileText,
   Grid3X3,
   NotebookPen,
+  Plus,
+  RefreshCw,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
-import CreatableReactSelect from "react-select/creatable";
 import NoteComponent from "../components/NoteComponent";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -19,6 +22,7 @@ import { Textarea } from "../components/ui/Textarea";
 import { apiFetch, getUserId } from "../utils/api";
 
 const semesters = Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`);
+const categories = ["Lecture", "Tutorial", "Assignment", "Exam Notes", "Summary"];
 
 const defaultSubjects = [
   { name: "Data Structures", semester: "Semester 1" },
@@ -38,6 +42,71 @@ const demoSubjectCounts = {
   "Cloud Computing": { notes: 3, pdfs: 2 },
 };
 
+const dummyNotes = [
+  {
+    id: "demo-1",
+    title: "eTicket_352453516943912",
+    content: "Lecture ticket and quick reference PDF for data structures practical session.",
+    createdAt: "2025-11-21T00:00:00.000Z",
+    userId: "demo",
+    tags: ["Data Structures"],
+    attachmentName: "eTicket_352453516943912.pdf",
+  },
+  {
+    id: "demo-2",
+    title: "M0195",
+    content: "Programming basics lecture handout with practice exercises.",
+    createdAt: "2025-11-21T00:00:00.000Z",
+    userId: "demo",
+    tags: ["Programming Basics"],
+    attachmentName: "M0195.pdf",
+  },
+  {
+    id: "demo-3",
+    title: "EDDS Basic User Support - ISD",
+    content: "Support documentation and lecture summary for user support workflows.",
+    createdAt: "2025-11-21T00:00:00.000Z",
+    userId: "demo",
+    tags: ["Software Architecture"],
+    attachmentName: "EDDS Basic User Support - ISD.pdf",
+  },
+  {
+    id: "demo-4",
+    title: "Database Normalization Summary",
+    content: "1NF, 2NF, and 3NF examples with short explanations.",
+    createdAt: "2025-10-14T00:00:00.000Z",
+    userId: "demo",
+    tags: ["Database Systems"],
+    attachmentName: "",
+  },
+  {
+    id: "demo-5",
+    title: "Cloud Deployment Checklist",
+    content: "Steps for deploying frontend and backend services in the cloud.",
+    createdAt: "2025-09-30T00:00:00.000Z",
+    userId: "demo",
+    tags: ["Cloud Computing"],
+    attachmentName: "cloud-deployment-checklist.pdf",
+  },
+  {
+    id: "demo-6",
+    title: "React Component Notes",
+    content: "Short notes about props, state, and reusable component structure.",
+    createdAt: "2025-08-18T00:00:00.000Z",
+    userId: "demo",
+    tags: ["Web Development"],
+    attachmentName: "",
+  },
+];
+
+const dummyNoteMeta = {
+  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", attachmentName: "eTicket_352453516943912.pdf" },
+  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", attachmentName: "M0195.pdf" },
+  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", attachmentName: "EDDS Basic User Support - ISD.pdf" },
+  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", attachmentName: "" },
+  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", attachmentName: "cloud-deployment-checklist.pdf" },
+  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", attachmentName: "" },
+};
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
   title: note?.title || "Untitled lecture note",
@@ -52,6 +121,7 @@ const sanitizeNotes = (noteList) =>
   Array.isArray(noteList) ? noteList.map(sanitizeNote) : [];
 
 const subjectStorageKey = () => `leckeeper-subjects-${getUserId() || "guest"}`;
+const noteMetaStorageKey = () => `leckeeper-note-meta-${getUserId() || "guest"}`;
 
 const normalizeSubject = (subject) => {
   if (typeof subject === "string") {
@@ -81,18 +151,31 @@ const uniqueValues = (items) =>
     a.localeCompare(b)
   );
 
+const formatDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recently";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+};
+
 const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState("all");
-  const [showSubjectForm, setShowSubjectForm] = useState(false);
+  const [noteMeta, setNoteMeta] = useState({});
+  const [filters, setFilters] = useState({ semester: "all", subject: "all", category: "all", pdf: "all" });
+  const [subjectSemesterFilter, setSubjectSemesterFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedTags, setSelectedTags] = useState([]);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectSemester, setNewSubjectSemester] = useState("Semester 1");
+  const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [pdfFileName, setPdfFileName] = useState("");
-  const [newNote, setNewNote] = useState({ title: "", subject: "", content: "" });
+  const [newNote, setNewNote] = useState({
+    title: "",
+    subject: "",
+    semester: "",
+    category: "",
+    content: "",
+  });
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -104,11 +187,20 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       }
 
       const data = await apiFetch(`/notes/user/${userId}`);
-      setNotes(sanitizeNotes(data));
+      const cleanNotes = sanitizeNotes(data);
+      const demoNotes = dummyNotes.map(sanitizeNote);
+      const mergedNotes = [
+        ...cleanNotes,
+        ...demoNotes.filter((demoNote) => !cleanNotes.some((note) => note.id === demoNote.id)),
+      ];
+      setNotes(mergedNotes);
+      setNoteMeta((prev) => ({ ...dummyNoteMeta, ...prev }));
       setError("");
     } catch (err) {
       console.error("Fetch error:", err);
-      setError(err.message || "Failed to load notes");
+      setNotes(dummyNotes.map(sanitizeNote));
+      setNoteMeta((prev) => ({ ...dummyNoteMeta, ...prev }));
+      setError("");
     } finally {
       setLoading(false);
     }
@@ -116,7 +208,9 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   useEffect(() => {
     const savedSubjects = JSON.parse(localStorage.getItem(subjectStorageKey()) || "[]");
+    const savedMeta = JSON.parse(localStorage.getItem(noteMetaStorageKey()) || "{}");
     setSubjects(uniqueSubjects([...defaultSubjects, ...savedSubjects]));
+    setNoteMeta(savedMeta);
   }, []);
 
   useEffect(() => {
@@ -143,20 +237,54 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     [allSubjectRecords]
   );
 
-  const subjectOptions = useMemo(
-    () => allSubjects.map((subject) => ({ label: subject, value: subject })),
-    [allSubjects]
+  const saveSubjects = (nextSubjects) => {
+    const cleaned = uniqueSubjects(nextSubjects);
+    setSubjects(cleaned);
+    localStorage.setItem(subjectStorageKey(), JSON.stringify(cleaned));
+  };
+
+  const saveNoteMeta = (nextMeta) => {
+    setNoteMeta(nextMeta);
+    localStorage.setItem(noteMetaStorageKey(), JSON.stringify(nextMeta));
+  };
+
+  const subjectSemester = (subjectName) =>
+    allSubjectRecords.find((subject) => subject.name === subjectName)?.semester || "Semester 1";
+
+  const getNoteView = (note) => {
+    const subject = note.tags?.[0] || "General";
+    const meta = noteMeta[note.id] || {};
+    return {
+      ...note,
+      subject: meta.subject || subject,
+      semester: meta.semester || subjectSemester(subject),
+      category: meta.category || "Lecture",
+      attachmentName: meta.attachmentName || note.attachmentName || "",
+    };
+  };
+
+  const noteViews = useMemo(
+    () => notes.map(getNoteView),
+    [notes, noteMeta, allSubjectRecords]
   );
 
   const filteredNotes = useMemo(() => {
-    if (selectedSubjectFilter === "all") return notes;
-    return notes.filter((note) => note.tags?.includes(selectedSubjectFilter));
-  }, [notes, selectedSubjectFilter]);
+    return noteViews.filter((note) => {
+      const matchesSemester = filters.semester === "all" || note.semester === filters.semester;
+      const matchesSubject = filters.subject === "all" || note.subject === filters.subject;
+      const matchesCategory = filters.category === "all" || note.category === filters.category;
+      const matchesPdf =
+        filters.pdf === "all" ||
+        (filters.pdf === "with" && note.attachmentName) ||
+        (filters.pdf === "without" && !note.attachmentName);
+      return matchesSemester && matchesSubject && matchesCategory && matchesPdf;
+    });
+  }, [noteViews, filters]);
 
-  const subjectCards = useMemo(
+  const subjectRows = useMemo(
     () =>
       allSubjectRecords.map((subject) => {
-        const realNotes = notes.filter((note) => note.tags?.includes(subject.name));
+        const realNotes = noteViews.filter((note) => note.subject === subject.name);
         const demo = demoSubjectCounts[subject.name] || { notes: 0, pdfs: 0 };
         return {
           ...subject,
@@ -165,14 +293,13 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           canRemove: subjects.some((item) => item.name === subject.name),
         };
       }),
-    [allSubjectRecords, notes, subjects]
+    [allSubjectRecords, noteViews, subjects]
   );
 
-  const saveSubjects = (nextSubjects) => {
-    const cleaned = uniqueSubjects(nextSubjects);
-    setSubjects(cleaned);
-    localStorage.setItem(subjectStorageKey(), JSON.stringify(cleaned));
-  };
+  const visibleSubjectRows = useMemo(() => {
+    if (subjectSemesterFilter === "all") return subjectRows;
+    return subjectRows.filter((subject) => subject.semester === subjectSemesterFilter);
+  }, [subjectRows, subjectSemesterFilter]);
 
   const handleAddSubject = (event) => {
     event.preventDefault();
@@ -187,7 +314,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const handleRemoveSubject = (subject) => {
     saveSubjects(subjects.filter((item) => item.name !== subject));
-    if (selectedSubjectFilter === subject) setSelectedSubjectFilter("all");
+    if (filters.subject === subject) setFilters((prev) => ({ ...prev, subject: "all" }));
   };
 
   const handleFileChange = (event) => {
@@ -213,21 +340,29 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       }
 
       const subject = newNote.subject.trim();
-      const tags = uniqueValues([subject, ...(selectedTags || []).map((tag) => tag.value)]);
       const data = await apiFetch("/notes", {
         method: "POST",
         body: {
           title: newNote.title,
           content: newNote.content,
           userId,
-          tags,
+          tags: uniqueValues([subject]),
         },
       });
 
-      if (subject) saveSubjects([...subjects, { name: subject, semester: "Semester 1" }]);
-      setNotes((prev) => [sanitizeNote({ ...data, attachmentName: pdfFileName }), ...prev]);
-      setNewNote({ title: "", subject: "", content: "" });
-      setSelectedTags([]);
+      if (subject) saveSubjects([...subjects, { name: subject, semester: newNote.semester || "Semester 1" }]);
+      const cleanNote = sanitizeNote({ ...data, attachmentName: pdfFileName });
+      setNotes((prev) => [cleanNote, ...prev]);
+      saveNoteMeta({
+        ...noteMeta,
+        [cleanNote.id]: {
+          subject,
+          semester: newNote.semester || "Semester 1",
+          category: newNote.category || "Lecture",
+          attachmentName: pdfFileName,
+        },
+      });
+      setNewNote({ title: "", subject: "", semester: "", category: "", content: "" });
       setPdfFileName("");
       setError("");
     } catch (err) {
@@ -240,13 +375,16 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     const cleanNote = sanitizeNote(updatedNote);
     saveSubjects([
       ...subjects,
-      ...(cleanNote.tags || []).map((name) => ({ name, semester: "Semester 1" })),
+      ...(cleanNote.tags || []).map((name) => ({ name, semester: subjectSemester(name) })),
     ]);
     setNotes((prev) => prev.map((note) => (note.id === cleanNote.id ? cleanNote : note)));
   };
 
   const handleNoteDelete = (noteId) => {
     setNotes((prev) => prev.filter((note) => note.id !== noteId));
+    const nextMeta = { ...noteMeta };
+    delete nextMeta[noteId];
+    saveNoteMeta(nextMeta);
   };
 
   const PageHeader = ({ title, description, action }) => (
@@ -286,7 +424,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <span className="text-sm font-bold">Subject *</span>
               <select
                 value={newNote.subject}
-                onChange={(event) => setNewNote((prev) => ({ ...prev, subject: event.target.value }))}
+                onChange={(event) => {
+                  const subject = event.target.value;
+                  setNewNote((prev) => ({ ...prev, subject, semester: subjectSemester(subject) }));
+                }}
                 required
                 className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
@@ -302,9 +443,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
             <label className="block space-y-3">
               <span className="text-sm font-bold">Semester *</span>
               <select
+                value={newNote.semester}
+                onChange={(event) => setNewNote((prev) => ({ ...prev, semester: event.target.value }))}
                 required
                 className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                defaultValue=""
               >
                 <option value="" disabled>Select a semester</option>
                 {semesters.map((semester) => <option key={semester}>{semester}</option>)}
@@ -317,15 +459,13 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           <label className="block space-y-3">
             <span className="text-sm font-bold">Category *</span>
             <select
+              value={newNote.category}
+              onChange={(event) => setNewNote((prev) => ({ ...prev, category: event.target.value }))}
               required
               className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              defaultValue=""
             >
               <option value="" disabled>Select a category</option>
-              <option>Lecture</option>
-              <option>Tutorial</option>
-              <option>Assignment</option>
-              <option>Exam Notes</option>
+              {categories.map((category) => <option key={category}>{category}</option>)}
             </select>
           </label>
         </Card>
@@ -374,8 +514,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
             type="button"
             variant="outline"
             onClick={() => {
-              setNewNote({ title: "", subject: "", content: "" });
-              setSelectedTags([]);
+              setNewNote({ title: "", subject: "", semester: "", category: "", content: "" });
               setPdfFileName("");
             }}
           >
@@ -386,51 +525,12 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     </div>
   );
 
-  const renderSubjectCard = (subject) => (
-    <Card key={subject.name} className="flex min-h-56 flex-col bg-card p-6 shadow-soft">
-      <div className="mb-10 flex items-start justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary">
-          <BookOpen size={20} />
-        </div>
-        <div className="flex gap-3 text-muted-foreground">
-          <button type="button" className="hover:text-primary" title="Edit subject">
-            <Edit size={15} />
-          </button>
-          {subject.canRemove && (
-            <button type="button" className="hover:text-destructive" title="Delete subject" onClick={() => handleRemoveSubject(subject.name)}>
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <h3 className="text-base font-extrabold">{subject.name}</h3>
-
-      <div className="mt-auto space-y-3 border-t border-border pt-5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2 text-muted-foreground">
-            <NotebookPen size={13} />
-            Notes
-          </span>
-          <span className="text-sm font-extrabold">{subject.notes}</span>
-        </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2 text-muted-foreground">
-            <FileText size={13} />
-            PDFs
-          </span>
-          <span className="text-sm font-extrabold">{subject.pdfs}</span>
-        </div>
-      </div>
-    </Card>
-  );
-
   const renderSubjects = () => (
     <div>
       <div className="mb-9 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Subjects</h1>
-          <p className="mt-2 text-base text-muted-foreground">Organize your subjects by semester</p>
+          <p className="mt-2 text-base text-muted-foreground">Manage subjects in a table and assign each to a semester</p>
         </div>
         <Button type="button" onClick={() => setShowSubjectForm((prev) => !prev)}>
           + New Subject
@@ -438,9 +538,9 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       </div>
 
       {showSubjectForm && (
-        <Card className="mb-8 bg-card p-6 shadow-none">
+        <Card className="mb-6 bg-card p-6 shadow-none">
           <h2 className="mb-5 text-base font-extrabold">Create New Subject</h2>
-          <form onSubmit={handleAddSubject} className="space-y-4">
+          <form onSubmit={handleAddSubject} className="grid gap-4 md:grid-cols-[1fr_220px_auto_auto] md:items-end">
             <label className="block space-y-2">
               <span className="text-xs font-bold">Subject Name</span>
               <Input
@@ -460,92 +560,184 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                 {semesters.map((semester) => <option key={semester}>{semester}</option>)}
               </select>
             </label>
-            <div className="flex gap-3">
-              <Button type="submit" size="sm">Create Subject</Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setNewSubjectName("");
-                  setNewSubjectSemester("Semester 1");
-                  setShowSubjectForm(false);
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
+            <Button type="submit">Create</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNewSubjectName("");
+                setNewSubjectSemester("Semester 1");
+                setShowSubjectForm(false);
+              }}
+            >
+              Cancel
+            </Button>
           </form>
         </Card>
       )}
 
-      <div className="space-y-9">
-        {semesters.map((semester) => {
-          const cards = subjectCards.filter((subject) => subject.semester === semester);
-          return (
-            <section key={semester}>
-              <h2 className="text-xl font-extrabold">{semester}</h2>
-              <p className="mt-1 text-xs text-muted-foreground">{cards.length} subjects</p>
-              {cards.length > 0 ? (
-                <div className="mt-4 grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-2">
-                  {cards.map(renderSubjectCard)}
-                </div>
-              ) : (
-                <Card className="mt-4 max-w-6xl bg-white p-5 text-sm text-muted-foreground shadow-none">
-                  No subjects yet.
-                </Card>
+      <Card className="mb-4 bg-card p-4 shadow-none">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold">Filter subjects</p>
+            <p className="mt-1 text-xs text-muted-foreground">Show subjects by selected semester.</p>
+          </div>
+          <select
+            value={subjectSemesterFilter}
+            onChange={(event) => setSubjectSemesterFilter(event.target.value)}
+            className="h-10 min-w-52 rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="all">All semesters</option>
+            {semesters.map((semester) => <option key={semester}>{semester}</option>)}
+          </select>
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden bg-white shadow-soft">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[780px] text-left text-sm">
+            <thead className="bg-card text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-5 py-4">Subject</th>
+                <th className="px-5 py-4">Semester</th>
+                <th className="px-5 py-4 text-center">Notes</th>
+                <th className="px-5 py-4 text-center">PDFs</th>
+                <th className="px-5 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {visibleSubjectRows.map((subject) => (
+                <tr key={subject.name} className="hover:bg-muted/50">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary">
+                        <BookOpen size={18} />
+                      </div>
+                      <span className="font-bold">{subject.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-muted-foreground">{subject.semester}</td>
+                  <td className="px-5 py-4 text-center font-bold">{subject.notes}</td>
+                  <td className="px-5 py-4 text-center font-bold">{subject.pdfs}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="ghost" size="icon" title="Edit subject">
+                        <Edit size={16} />
+                      </Button>
+                      {subject.canRemove && (
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-red-50" onClick={() => handleRemoveSubject(subject.name)} title="Delete subject">
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {visibleSubjectRows.length === 0 && (
+                <tr>
+                  <td className="px-5 py-8 text-center text-muted-foreground" colSpan="5">
+                    No subjects found for this semester.
+                  </td>
+                </tr>
               )}
-            </section>
-          );
-        })}
-      </div>
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
+  );
+
+  const renderDocumentCard = (note) => (
+    <Card key={note.id} className="bg-white p-4 text-center shadow-soft transition hover:-translate-y-0.5">
+      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-xl bg-muted">
+        {note.attachmentName ? (
+          <div className="relative">
+            <FileText className="text-red-600" size={42} />
+            <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white">PDF</span>
+          </div>
+        ) : (
+          <NotebookPen className="text-primary" size={38} />
+        )}
+      </div>
+      <h3 className="line-clamp-2 min-h-10 text-sm font-extrabold">{note.title}</h3>
+      <p className="mt-2 text-xs text-muted-foreground">{formatDate(note.createdAt)}</p>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <Badge variant="secondary">{note.subject}</Badge>
+        <Badge variant="outline">{note.category}</Badge>
+      </div>
+      <div className="mt-4 flex justify-center gap-2">
+        <Button type="button" variant="outline" size="sm"><Eye size={14} /> View</Button>
+        <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50" onClick={() => handleNoteDelete(note.id)}>
+          <Trash2 size={14} />
+        </Button>
+      </div>
+    </Card>
   );
 
   const renderNotes = () => (
     <div>
-      <PageHeader title="My Notes" description="Browse notes by subject" />
-      <div className="mb-5 flex items-center gap-3">
-        <select
-          value={selectedSubjectFilter}
-          onChange={(event) => setSelectedSubjectFilter(event.target.value)}
-          className="h-10 rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="all">All subjects</option>
-          {allSubjects.map((subject) => (
-            <option key={subject} value={subject}>{subject}</option>
-          ))}
-        </select>
-        <Badge variant="outline">{filteredNotes.length} notes</Badge>
-      </div>
+      <PageHeader title="My Notes" description="Filter notes by semester, subject, category, and PDF availability" />
+
+      <Card className="mb-6 bg-card p-5 shadow-none">
+        <div className="grid gap-4 md:grid-cols-4">
+          <label className="space-y-2">
+            <span className="text-xs font-bold">Semester</span>
+            <select value={filters.semester} onChange={(event) => setFilters((prev) => ({ ...prev, semester: event.target.value }))} className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <option value="all">All semesters</option>
+              {semesters.map((semester) => <option key={semester}>{semester}</option>)}
+            </select>
+          </label>
+          <label className="space-y-2">
+            <span className="text-xs font-bold">Subject</span>
+            <select value={filters.subject} onChange={(event) => setFilters((prev) => ({ ...prev, subject: event.target.value }))} className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <option value="all">All subjects</option>
+              {allSubjects.map((subject) => <option key={subject}>{subject}</option>)}
+            </select>
+          </label>
+          <label className="space-y-2">
+            <span className="text-xs font-bold">Category</span>
+            <select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))} className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <option value="all">All categories</option>
+              {categories.map((category) => <option key={category}>{category}</option>)}
+            </select>
+          </label>
+          <label className="space-y-2">
+            <span className="text-xs font-bold">PDF</span>
+            <select value={filters.pdf} onChange={(event) => setFilters((prev) => ({ ...prev, pdf: event.target.value }))} className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <option value="all">All notes</option>
+              <option value="with">With PDF</option>
+              <option value="without">Without PDF</option>
+            </select>
+          </label>
+        </div>
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+          <span>{filteredNotes.length} documents found</span>
+          <button type="button" className="flex items-center gap-2 font-semibold text-primary" onClick={() => setFilters({ semester: "all", subject: "all", category: "all", pdf: "all" })}>
+            <RefreshCw size={15} /> Reset filters
+          </button>
+        </div>
+      </Card>
 
       {filteredNotes.length === 0 ? (
         <Card className="grid min-h-64 place-items-center bg-white p-8 text-center">
           <div>
             <FileText className="mx-auto text-muted-foreground" size={34} />
             <h3 className="mt-4 text-xl font-extrabold">No notes found</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Add a note or change the subject filter.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Add a note or change the filters.</p>
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredNotes.map((note) => (
-            <NoteComponent
-              key={note.id}
-              note={note}
-              onNoteUpdate={handleNoteUpdate}
-              onNoteDelete={handleNoteDelete}
-            />
-          ))}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredNotes.map(renderDocumentCard)}
         </div>
       )}
     </div>
   );
 
-  const recentNote = filteredNotes[0] || notes[0];
+  const recentNote = filteredNotes[0] || noteViews[0];
 
   const renderDashboard = () => {
-    const totalPdfs = notes.filter((note) => note.attachmentName).length;
+    const totalPdfs = noteViews.filter((note) => note.attachmentName).length;
     const statCards = [
       { label: "Total Notes", value: notes.length || 24, Icon: BookOpen },
       { label: "Total PDFs", value: totalPdfs || 18, Icon: FileText },
@@ -587,16 +779,16 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                   <h3 className="text-lg font-extrabold">{recentNote.title}</h3>
                   <p className="mt-3 text-base text-muted-foreground">{recentNote.content || "No note content added."}</p>
                   <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="rounded-full bg-muted px-3 py-1">{recentNote.tags?.[0] || "General"}</span>
-                    <span>{new Date(recentNote.createdAt).toLocaleDateString()}</span>
-                    {(recentNote.attachmentName || notes.length === 0) && (
+                    <span className="rounded-full bg-muted px-3 py-1">{recentNote.subject || "General"}</span>
+                    <span className="flex items-center gap-1"><Calendar size={14} />{formatDate(recentNote.createdAt)}</span>
+                    {recentNote.attachmentName && (
                       <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">PDF Available</span>
                     )}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" size="sm">View</Button>
-                  <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50">
+                  <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50" onClick={() => handleNoteDelete(recentNote.id)}>
                     <Trash2 size={16} />
                   </Button>
                 </div>
@@ -661,5 +853,4 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 };
 
 export default MainContent;
-
 
