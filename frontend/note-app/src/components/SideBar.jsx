@@ -8,6 +8,7 @@ import {
   Menu,
   Plus,
   Settings,
+  Users,
   X,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ const menuItems = [
   { id: "dashboard", label: "Dashboard", Icon: Home },
   { id: "notes", label: "My Notes", Icon: FileText },
   { id: "add", label: "Add Note", Icon: Plus },
+  { id: "groups", label: "Groups", Icon: Users },
   { id: "subjects", label: "Subjects", Icon: Grid3X3 },
   { id: "settings", label: "Settings", Icon: Settings },
 ];

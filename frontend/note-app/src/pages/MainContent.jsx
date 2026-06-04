@@ -8,11 +8,16 @@ import {
   FileText,
   Folder,
   Grid3X3,
+  Globe2,
   ImageIcon,
+  LockKeyhole,
   Plus,
   RefreshCw,
+  Share2,
   Trash2,
   Upload,
+  UserPlus,
+  Users,
   X,
 } from "lucide-react";
 import { Badge } from "../components/ui/Badge";
@@ -23,6 +28,18 @@ import { apiFetch, getUserId } from "../utils/api";
 
 const semesters = Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`);
 const categories = ["Lecture", "Tutorial", "Assignment", "Exam Notes", "Summary"];
+const noteScopes = [
+  { id: "global", label: "Global", description: "Notes published for everyone", Icon: Globe2 },
+  { id: "private", label: "Private", description: "Only visible to you", Icon: LockKeyhole },
+  { id: "shared", label: "Shared", description: "Notes you shared", Icon: Share2 },
+  { id: "group", label: "Group", description: "Notes shared inside groups", Icon: Users },
+];
+
+const visibilityOptions = [
+  { value: "private", label: "Private", description: "Only you can see this folder." },
+  { value: "global", label: "Global", description: "Everyone can see this folder." },
+  { value: "group", label: "Group", description: "Only selected group members can see this folder." },
+];
 
 const defaultSubjects = [
   { name: "Data Structures", semester: "Semester 1" },
@@ -31,6 +48,21 @@ const defaultSubjects = [
   { name: "Web Development", semester: "Semester 2" },
   { name: "Database Systems", semester: "Semester 3" },
   { name: "Cloud Computing", semester: "Semester 3" },
+];
+
+const defaultGroups = [
+  {
+    id: "group-demo-1",
+    name: "SE Lecture Circle",
+    admin: "Nimal Perera",
+    members: ["Nimal Perera", "Ayesha Fernando", "Kavindu Silva"],
+  },
+  {
+    id: "group-demo-2",
+    name: "Database Revision Team",
+    admin: "Ayesha Fernando",
+    members: ["Ayesha Fernando", "You", "Dinuka Jayasinghe"],
+  },
 ];
 
 const demoSubjectCounts = {
@@ -100,12 +132,12 @@ const dummyNotes = [
 ];
 
 const dummyNoteMeta = {
-  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", attachmentName: "eTicket_352453516943912.pdf", documents: ["eTicket_352453516943912.pdf", "stack-queue-diagram.png", "lab-whiteboard.jpg"] },
-  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", attachmentName: "M0195.pdf", documents: ["M0195.pdf", "flowchart-example.png", "programming-basics.docx"] },
-  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", attachmentName: "EDDS Basic User Support - ISD.pdf", documents: ["EDDS Basic User Support - ISD.pdf", "support-workflow.png", "architecture-slides.pptx"] },
-  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", attachmentName: "", documents: ["normalization-table.png", "database-normalization.xlsx"] },
-  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", attachmentName: "cloud-deployment-checklist.pdf", documents: ["cloud-deployment-checklist.pdf", "deployment-pipeline.png"] },
-  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", attachmentName: "", documents: ["component-tree.png", "state-props-sketch.jpg", "react-revision.docx"] },
+  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", visibility: "global", author: "Ayesha Fernando", attachmentName: "eTicket_352453516943912.pdf", documents: ["eTicket_352453516943912.pdf", "stack-queue-diagram.png", "lab-whiteboard.jpg"] },
+  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", visibility: "private", author: "You", attachmentName: "M0195.pdf", documents: ["M0195.pdf", "flowchart-example.png", "programming-basics.docx"] },
+  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", visibility: "group", groupId: "group-demo-1", author: "Nimal Perera", attachmentName: "EDDS Basic User Support - ISD.pdf", documents: ["EDDS Basic User Support - ISD.pdf", "support-workflow.png", "architecture-slides.pptx"] },
+  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", visibility: "group", sharedByMe: true, sharedTo: "group", groupId: "group-demo-2", author: "You", attachmentName: "", documents: ["normalization-table.png", "database-normalization.xlsx"] },
+  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", visibility: "global", author: "Kavindu Silva", attachmentName: "cloud-deployment-checklist.pdf", documents: ["cloud-deployment-checklist.pdf", "deployment-pipeline.png"] },
+  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", visibility: "private", author: "You", attachmentName: "", documents: ["component-tree.png", "state-props-sketch.jpg", "react-revision.docx"] },
 };
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
@@ -122,6 +154,12 @@ const sanitizeNotes = (noteList) =>
 
 const subjectStorageKey = () => `leckeeper-subjects-${getUserId() || "guest"}`;
 const noteMetaStorageKey = () => `leckeeper-note-meta-${getUserId() || "guest"}`;
+const groupStorageKey = () => `leckeeper-groups-${getUserId() || "guest"}`;
+
+const currentAuthorName = () => {
+  const userId = getUserId();
+  return userId ? `You (${userId.slice(-4)})` : "You";
+};
 
 const normalizeSubject = (subject) => {
   if (typeof subject === "string") {
@@ -191,21 +229,31 @@ const getDocumentIcon = (fileName, size = 38) => {
 const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [noteMeta, setNoteMeta] = useState({});
   const [filters, setFilters] = useState({ semester: "all", subject: "all", category: "all" });
   const [subjectSemesterFilter, setSubjectSemesterFilter] = useState("all");
+  const [activeNoteScope, setActiveNoteScope] = useState("private");
   const [selectedNote, setSelectedNote] = useState(null);
+  const [shareNote, setShareNote] = useState(null);
+  const [shareTarget, setShareTarget] = useState("global");
+  const [shareGroupId, setShareGroupId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectSemester, setNewSubjectSemester] = useState("Semester 1");
   const [showSubjectForm, setShowSubjectForm] = useState(false);
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupMembers, setNewGroupMembers] = useState("");
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [newNote, setNewNote] = useState({
     title: "",
     subject: "",
     semester: "",
     category: "",
+    visibility: "private",
+    groupId: "",
   });
 
   const fetchNotes = useCallback(async () => {
@@ -240,7 +288,9 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   useEffect(() => {
     const savedSubjects = JSON.parse(localStorage.getItem(subjectStorageKey()) || "[]");
     const savedMeta = JSON.parse(localStorage.getItem(noteMetaStorageKey()) || "{}");
+    const savedGroups = JSON.parse(localStorage.getItem(groupStorageKey()) || "[]");
     setSubjects(uniqueSubjects([...defaultSubjects, ...savedSubjects]));
+    setGroups([...defaultGroups, ...savedGroups.filter((group) => !defaultGroups.some((item) => item.id === group.id))]);
     setNoteMeta(savedMeta);
   }, []);
 
@@ -279,6 +329,12 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     localStorage.setItem(noteMetaStorageKey(), JSON.stringify(nextMeta));
   };
 
+  const saveGroups = (nextGroups) => {
+    setGroups(nextGroups);
+    const customGroups = nextGroups.filter((group) => !defaultGroups.some((item) => item.id === group.id));
+    localStorage.setItem(groupStorageKey(), JSON.stringify(customGroups));
+  };
+
   const subjectSemester = (subjectName) =>
     allSubjectRecords.find((subject) => subject.name === subjectName)?.semester || "Semester 1";
 
@@ -297,6 +353,11 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       category: meta.category || "Lecture",
       attachmentName: meta.attachmentName || note.attachmentName || documents.find((fileName) => getFileExtension(fileName) === ".pdf") || "",
       documents,
+      visibility: meta.visibility || "private",
+      author: meta.author || currentAuthorName(),
+      groupId: meta.groupId || "",
+      sharedByMe: Boolean(meta.sharedByMe),
+      sharedTo: meta.sharedTo || "",
     };
   };
 
@@ -313,6 +374,30 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       return matchesSemester && matchesSubject && matchesCategory;
     });
   }, [noteViews, filters]);
+
+  const scopeNotes = useMemo(
+    () =>
+      filteredNotes.filter((note) => {
+        if (activeNoteScope === "shared") return note.sharedByMe;
+        return note.visibility === activeNoteScope;
+      }),
+    [filteredNotes, activeNoteScope]
+  );
+
+  const noteScopeCounts = useMemo(
+    () =>
+      noteScopes.reduce((counts, scope) => {
+        counts[scope.id] = filteredNotes.filter((note) => {
+          if (scope.id === "shared") return note.sharedByMe;
+          return note.visibility === scope.id;
+        }).length;
+        return counts;
+      }, {}),
+    [filteredNotes]
+  );
+
+  const groupName = (groupId) =>
+    groups.find((group) => group.id === groupId)?.name || "No group selected";
 
   const getFolderResources = (note) => {
     const documents = Array.isArray(note.documents) ? note.documents : [note.attachmentName].filter(Boolean);
@@ -386,6 +471,11 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         return;
       }
 
+      if (newNote.visibility === "group" && !newNote.groupId) {
+        setError("Please select a group for this note folder.");
+        return;
+      }
+
       const subject = newNote.subject.trim();
       const data = await apiFetch("/notes", {
         method: "POST",
@@ -409,10 +499,16 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           category: newNote.category || "Lecture",
           attachmentName: firstPdf,
           documents: selectedDocuments,
+          visibility: newNote.visibility || "private",
+          groupId: newNote.visibility === "group" ? newNote.groupId : "",
+          author: currentAuthorName(),
+          sharedByMe: false,
+          sharedTo: "",
         },
       });
-      setNewNote({ title: "", subject: "", semester: "", category: "" });
+      setNewNote({ title: "", subject: "", semester: "", category: "", visibility: "private", groupId: "" });
       setSelectedDocuments([]);
+      setActiveNoteScope(newNote.visibility || "private");
       setError("");
     } catch (err) {
       setError(err.message || "Failed to create note");
@@ -435,6 +531,64 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     const nextMeta = { ...noteMeta };
     delete nextMeta[noteId];
     saveNoteMeta(nextMeta);
+  };
+
+  const handleCreateGroup = (event) => {
+    event.preventDefault();
+    if (!newGroupName.trim()) return;
+
+    const extraMembers = newGroupMembers
+      .split(",")
+      .map((member) => member.trim())
+      .filter(Boolean);
+    const admin = currentAuthorName();
+    const nextGroup = {
+      id: `group-${Date.now()}`,
+      name: newGroupName.trim(),
+      admin,
+      members: uniqueValues([admin, ...extraMembers]),
+    };
+
+    saveGroups([nextGroup, ...groups]);
+    setNewGroupName("");
+    setNewGroupMembers("");
+    setShowGroupForm(false);
+    setError("");
+  };
+
+  const openShareDialog = (note) => {
+    setShareNote(note);
+    setShareTarget("global");
+    setShareGroupId(groups[0]?.id || "");
+  };
+
+  const handleShareNote = () => {
+    if (!shareNote) return;
+    if (shareTarget === "group" && !shareGroupId) {
+      setError("Please select a group to share this note.");
+      return;
+    }
+
+    saveNoteMeta({
+      ...noteMeta,
+      [shareNote.id]: {
+        ...(noteMeta[shareNote.id] || {}),
+        subject: shareNote.subject,
+        semester: shareNote.semester,
+        category: shareNote.category,
+        attachmentName: shareNote.attachmentName,
+        documents: shareNote.documents,
+        visibility: shareTarget === "global" ? "global" : "group",
+        groupId: shareTarget === "group" ? shareGroupId : "",
+        author: shareNote.author || currentAuthorName(),
+        sharedByMe: true,
+        sharedTo: shareTarget,
+      },
+    });
+    setActiveNoteScope("shared");
+    setSelectedNote(null);
+    setShareNote(null);
+    setError("");
   };
 
   const PageHeader = ({ title, description, action }) => (
@@ -523,6 +677,60 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
           <Card className="bg-card p-6 shadow-none">
             <div className="space-y-4">
+              <div>
+                <h2 className="text-sm font-bold">Folder Visibility *</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Choose who can see this note folder.</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {visibilityOptions.map((option) => {
+                  const selected = newNote.visibility === option.value;
+                  return (
+                    <label
+                      key={option.value}
+                      className={`cursor-pointer rounded-xl border p-4 transition ${
+                        selected ? "border-primary bg-secondary" : "border-border bg-white hover:bg-muted"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="visibility"
+                        value={option.value}
+                        checked={selected}
+                        onChange={(event) =>
+                          setNewNote((prev) => ({
+                            ...prev,
+                            visibility: event.target.value,
+                            groupId: event.target.value === "group" ? prev.groupId : "",
+                          }))
+                        }
+                        className="sr-only"
+                      />
+                      <span className="text-sm font-extrabold">{option.label}</span>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">{option.description}</p>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {newNote.visibility === "group" && (
+                <label className="block space-y-3">
+                  <span className="text-sm font-bold">Select Group *</span>
+                  <select
+                    value={newNote.groupId}
+                    onChange={(event) => setNewNote((prev) => ({ ...prev, groupId: event.target.value }))}
+                    required
+                    className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Choose a group</option>
+                    {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                  </select>
+                </label>
+              )}
+            </div>
+          </Card>
+
+          <Card className="bg-card p-6 shadow-none">
+            <div className="space-y-4">
               <span className="text-sm font-bold">Upload Documents *</span>
               <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white text-center hover:bg-muted">
                 <Upload className="mb-3 text-muted-foreground" size={26} />
@@ -563,7 +771,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               type="button"
               variant="outline"
               onClick={() => {
-                setNewNote({ title: "", subject: "", semester: "", category: "" });
+                setNewNote({ title: "", subject: "", semester: "", category: "", visibility: "private", groupId: "" });
                 setSelectedDocuments([]);
               }}
             >
@@ -582,6 +790,18 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               This form creates one folder in My Notes. Inside the folder you will see the uploaded documents as file cards.
             </p>
             <div className="mt-5 space-y-3 text-sm">
+              <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+                <span className="font-semibold">Visibility</span>
+                <Badge variant="outline">
+                  {visibilityOptions.find((option) => option.value === newNote.visibility)?.label || "Private"}
+                </Badge>
+              </div>
+              {newNote.visibility === "group" && (
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-muted p-3">
+                  <span className="font-semibold">Group</span>
+                  <span className="truncate text-muted-foreground">{groupName(newNote.groupId)}</span>
+                </div>
+              )}
               {selectedDocuments.length > 0 ? (
                 selectedDocuments.map((fileName) => (
                   <div key={fileName} className="flex items-center gap-3 rounded-lg bg-muted p-3">
@@ -725,16 +945,26 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   );
 
   const renderFolderCard = (note) => {
+    const scope = noteScopes.find((item) => item.id === note.visibility);
     return (
       <Card key={note.id} className="bg-white p-5 shadow-soft transition hover:-translate-y-0.5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-primary">
             <Folder size={38} fill="currentColor" strokeWidth={1.5} />
           </div>
+          {scope && <Badge variant="outline">{scope.label}</Badge>}
         </div>
 
         <h3 className="line-clamp-2 min-h-11 text-lg font-extrabold">{note.title}</h3>
         <p className="mt-3 text-sm text-muted-foreground">{formatDate(note.createdAt)}</p>
+
+        {note.visibility === "global" && (
+          <p className="mt-3 text-xs font-semibold text-muted-foreground">Author: {note.author}</p>
+        )}
+
+        {note.visibility === "group" && (
+          <p className="mt-3 text-xs font-semibold text-muted-foreground">Group: {groupName(note.groupId)}</p>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <Badge variant="secondary">{note.subject}</Badge>
@@ -746,6 +976,11 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           <Button type="button" variant="outline" size="sm" onClick={() => setSelectedNote(note)}>
             <Eye size={14} /> View Folder
           </Button>
+          {note.visibility === "private" && (
+            <Button type="button" variant="outline" size="sm" onClick={() => openShareDialog(note)}>
+              <Share2 size={14} /> Share
+            </Button>
+          )}
           <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50" onClick={() => handleNoteDelete(note.id)}>
             <Trash2 size={14} />
           </Button>
@@ -763,6 +998,64 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       <p className="mt-3 text-xs text-muted-foreground">{date}</p>
     </div>
   );
+
+  const renderShareDialog = () => {
+    if (!shareNote) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/35 p-4 backdrop-blur-md">
+        <Card className="w-full max-w-lg bg-white p-6 shadow-2xl">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-extrabold">Share Note Folder</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{shareNote.title}</p>
+            </div>
+            <Button type="button" variant="ghost" size="icon" onClick={() => setShareNote(null)}>
+              <X size={18} />
+            </Button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={`cursor-pointer rounded-xl border p-4 ${shareTarget === "global" ? "border-primary bg-secondary" : "border-border bg-muted/40"}`}>
+              <input type="radio" name="shareTarget" value="global" checked={shareTarget === "global"} onChange={() => setShareTarget("global")} className="sr-only" />
+              <div className="flex items-center gap-3">
+                <Globe2 className="text-primary" size={20} />
+                <span className="font-extrabold">Share to Global</span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">Everyone can see this folder.</p>
+            </label>
+
+            <label className={`cursor-pointer rounded-xl border p-4 ${shareTarget === "group" ? "border-primary bg-secondary" : "border-border bg-muted/40"}`}>
+              <input type="radio" name="shareTarget" value="group" checked={shareTarget === "group"} onChange={() => setShareTarget("group")} className="sr-only" />
+              <div className="flex items-center gap-3">
+                <Users className="text-primary" size={20} />
+                <span className="font-extrabold">Share to Group</span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">Only selected group members can see it.</p>
+            </label>
+          </div>
+
+          {shareTarget === "group" && (
+            <label className="mt-5 block space-y-2">
+              <span className="text-sm font-bold">Select group</span>
+              <select
+                value={shareGroupId}
+                onChange={(event) => setShareGroupId(event.target.value)}
+                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+            </label>
+          )}
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setShareNote(null)}>Cancel</Button>
+            <Button type="button" onClick={handleShareNote}>Share Folder</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  };
 
   const renderFolderView = (note) => {
     const resources = getFolderResources(note);
@@ -791,10 +1084,22 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                   <Badge variant="secondary">{note.subject}</Badge>
                   <Badge variant="outline">{note.semester}</Badge>
                   <Badge variant="outline">{note.category}</Badge>
+                  <Badge variant="outline">{noteScopes.find((scope) => scope.id === note.visibility)?.label || "Private"}</Badge>
                   <Badge variant="outline">{resources.total} items inside</Badge>
                 </div>
+                {note.visibility === "global" && (
+                  <p className="mt-3 text-xs font-semibold text-muted-foreground">Author: {note.author}</p>
+                )}
+                {note.visibility === "group" && (
+                  <p className="mt-3 text-xs font-semibold text-muted-foreground">Group: {groupName(note.groupId)}</p>
+                )}
               </div>
             </div>
+            {note.visibility === "private" && (
+              <Button type="button" variant="outline" onClick={() => openShareDialog(note)}>
+                <Share2 size={16} /> Share
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -830,10 +1135,40 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const renderNotes = () => (
     <div>
       {selectedNote ? (
-        renderFolderView(selectedNote)
+        <>
+          {renderFolderView(selectedNote)}
+          {renderShareDialog()}
+        </>
       ) : (
       <>
-      <PageHeader title="My Notes" description="Filter note folders by semester, subject, and category" />
+      <PageHeader title="My Notes" description="Open Global, Private, Shared, or Group note folders" />
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {noteScopes.map(({ id, label, description, Icon }) => {
+          const active = activeNoteScope === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveNoteScope(id)}
+              className={`rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 ${
+                active ? "border-primary bg-primary text-primary-foreground shadow-soft" : "border-border bg-white shadow-sm hover:bg-card"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${active ? "bg-white/15" : "bg-secondary text-primary"}`}>
+                  <Icon size={23} />
+                </div>
+                <span className={`rounded-full px-3 py-1 text-sm font-extrabold ${active ? "bg-white/15" : "bg-muted text-foreground"}`}>
+                  {noteScopeCounts[id] || 0}
+                </span>
+              </div>
+              <h2 className="mt-4 text-lg font-extrabold">{label}</h2>
+              <p className={`mt-2 text-sm leading-6 ${active ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{description}</p>
+            </button>
+          );
+        })}
+      </div>
 
       <Card className="mb-6 bg-card p-5 shadow-none">
         <div className="grid gap-4 md:grid-cols-3">
@@ -860,32 +1195,113 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           </label>
         </div>
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{filteredNotes.length} folders found</span>
+          <span>{scopeNotes.length} folders found in {noteScopes.find((scope) => scope.id === activeNoteScope)?.label}</span>
           <button type="button" className="flex items-center gap-2 font-semibold text-primary" onClick={() => setFilters({ semester: "all", subject: "all", category: "all" })}>
             <RefreshCw size={15} /> Reset filters
           </button>
         </div>
       </Card>
 
-      {filteredNotes.length === 0 ? (
+      {scopeNotes.length === 0 ? (
         <Card className="grid min-h-64 place-items-center bg-white p-8 text-center">
           <div>
             <FileText className="mx-auto text-muted-foreground" size={34} />
-            <h3 className="mt-4 text-xl font-extrabold">No notes found</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Add a note or change the filters.</p>
+            <h3 className="mt-4 text-xl font-extrabold">No folders found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Create a folder, share a private folder, or change the filters.</p>
           </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredNotes.map(renderFolderCard)}
+          {scopeNotes.map(renderFolderCard)}
         </div>
       )}
+      {renderShareDialog()}
       </>
       )}
     </div>
   );
 
   const recentNote = filteredNotes[0] || noteViews[0];
+
+  const renderGroups = () => (
+    <div>
+      <PageHeader
+        title="Groups"
+        description="Create study groups and see who joined each group"
+        action={
+          <Button type="button" onClick={() => setShowGroupForm((prev) => !prev)}>
+            <UserPlus size={16} /> Create Group
+          </Button>
+        }
+      />
+
+      {showGroupForm && (
+        <Card className="mb-6 bg-card p-6 shadow-none">
+          <h2 className="mb-5 text-base font-extrabold">New Group</h2>
+          <form onSubmit={handleCreateGroup} className="grid gap-4 lg:grid-cols-[1fr_1.4fr_auto_auto] lg:items-end">
+            <label className="block space-y-2">
+              <span className="text-xs font-bold">Group Name *</span>
+              <Input
+                value={newGroupName}
+                onChange={(event) => setNewGroupName(event.target.value)}
+                placeholder="e.g., OOP Revision Group"
+                required
+                className="bg-white"
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-bold">Members</span>
+              <Input
+                value={newGroupMembers}
+                onChange={(event) => setNewGroupMembers(event.target.value)}
+                placeholder="Add names separated by commas"
+                className="bg-white"
+              />
+            </label>
+            <Button type="submit">Create</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNewGroupName("");
+                setNewGroupMembers("");
+                setShowGroupForm(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        {groups.map((group) => (
+          <Card key={group.id} className="bg-white p-6 shadow-soft">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary">
+                  <Users size={27} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold">{group.name}</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">Admin: {group.admin}</p>
+                </div>
+              </div>
+              <Badge variant="outline">{group.members.length} members</Badge>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {group.members.map((member) => (
+                <span key={member} className="rounded-full bg-muted px-3 py-1 text-sm font-semibold">
+                  {member}
+                </span>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 
   const renderDashboard = () => {
     const totalDocuments = noteViews.reduce((count, note) => count + getFolderResources(note).total, 0);
@@ -988,6 +1404,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       {activeSection === "dashboard" && renderDashboard()}
       {activeSection === "notes" && renderNotes()}
       {activeSection === "add" && renderAddNote()}
+      {activeSection === "groups" && renderGroups()}
       {activeSection === "subjects" && renderSubjects()}
       {activeSection === "settings" && (
         <div>
