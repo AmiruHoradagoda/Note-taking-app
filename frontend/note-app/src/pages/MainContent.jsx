@@ -9,20 +9,16 @@ import {
   Folder,
   Grid3X3,
   ImageIcon,
-  Link as LinkIcon,
-  NotebookPen,
   Plus,
   RefreshCw,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
-import NoteComponent from "../components/NoteComponent";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
-import { Textarea } from "../components/ui/Textarea";
 import { apiFetch, getUserId } from "../utils/api";
 
 const semesters = Array.from({ length: 8 }, (_, index) => `Semester ${index + 1}`);
@@ -38,12 +34,12 @@ const defaultSubjects = [
 ];
 
 const demoSubjectCounts = {
-  "Data Structures": { notes: 4, pdfs: 3 },
-  "Programming Basics": { notes: 3, pdfs: 3 },
-  "Software Architecture": { notes: 3, pdfs: 3 },
-  "Web Development": { notes: 3, pdfs: 2 },
-  "Database Systems": { notes: 3, pdfs: 3 },
-  "Cloud Computing": { notes: 3, pdfs: 2 },
+  "Data Structures": { notes: 4, documents: 3 },
+  "Programming Basics": { notes: 3, documents: 3 },
+  "Software Architecture": { notes: 3, documents: 3 },
+  "Web Development": { notes: 3, documents: 3 },
+  "Database Systems": { notes: 3, documents: 2 },
+  "Cloud Computing": { notes: 3, documents: 2 },
 };
 
 const dummyNotes = [
@@ -95,7 +91,7 @@ const dummyNotes = [
   {
     id: "demo-6",
     title: "React Component Notes",
-    content: "Short notes about props, state, and reusable component structure.",
+    content: "Document set about props, state, and reusable component structure.",
     createdAt: "2025-08-18T00:00:00.000Z",
     userId: "demo",
     tags: ["Web Development"],
@@ -104,12 +100,12 @@ const dummyNotes = [
 ];
 
 const dummyNoteMeta = {
-  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", attachmentName: "eTicket_352453516943912.pdf", images: ["stack-queue-diagram.png", "lab-whiteboard.jpg"] },
-  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", attachmentName: "M0195.pdf", images: ["flowchart-example.png"] },
-  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", attachmentName: "EDDS Basic User Support - ISD.pdf", images: ["support-workflow.png", "isd-architecture.jpg"] },
-  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", attachmentName: "", images: ["normalization-table.png"] },
-  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", attachmentName: "cloud-deployment-checklist.pdf", images: ["deployment-pipeline.png"] },
-  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", attachmentName: "", images: ["component-tree.png", "state-props-sketch.jpg"] },
+  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", attachmentName: "eTicket_352453516943912.pdf", documents: ["eTicket_352453516943912.pdf", "stack-queue-diagram.png", "lab-whiteboard.jpg"] },
+  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", attachmentName: "M0195.pdf", documents: ["M0195.pdf", "flowchart-example.png", "programming-basics.docx"] },
+  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", attachmentName: "EDDS Basic User Support - ISD.pdf", documents: ["EDDS Basic User Support - ISD.pdf", "support-workflow.png", "architecture-slides.pptx"] },
+  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", attachmentName: "", documents: ["normalization-table.png", "database-normalization.xlsx"] },
+  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", attachmentName: "cloud-deployment-checklist.pdf", documents: ["cloud-deployment-checklist.pdf", "deployment-pipeline.png"] },
+  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", attachmentName: "", documents: ["component-tree.png", "state-props-sketch.jpg", "react-revision.docx"] },
 };
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
@@ -163,26 +159,53 @@ const formatDate = (value) => {
 
 const displayFileName = (fileName) => fileName.replace(/\.[^/.]+$/, "");
 
+const allowedDocumentExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
+const documentAccept = allowedDocumentExtensions.join(",");
+
+const getFileExtension = (fileName) => {
+  const match = fileName.toLowerCase().match(/\.[^/.]+$/);
+  return match ? match[0] : "";
+};
+
+const isAllowedDocument = (fileName) => allowedDocumentExtensions.includes(getFileExtension(fileName));
+
+const getDocumentIcon = (fileName, size = 38) => {
+  const extension = getFileExtension(fileName);
+  if ([".png", ".jpg", ".jpeg"].includes(extension)) {
+    return <ImageIcon className="text-primary" size={size} />;
+  }
+
+  const colorClass = {
+    ".pdf": "text-red-600",
+    ".doc": "text-blue-600",
+    ".docx": "text-blue-600",
+    ".ppt": "text-orange-600",
+    ".pptx": "text-orange-600",
+    ".xls": "text-green-600",
+    ".xlsx": "text-green-600",
+  }[extension] || "text-muted-foreground";
+
+  return <FileText className={colorClass} size={size} />;
+};
+
 const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [noteMeta, setNoteMeta] = useState({});
-  const [filters, setFilters] = useState({ semester: "all", subject: "all", category: "all", pdf: "all" });
+  const [filters, setFilters] = useState({ semester: "all", subject: "all", category: "all" });
   const [subjectSemesterFilter, setSubjectSemesterFilter] = useState("all");
   const [selectedNote, setSelectedNote] = useState(null);
-  const [showReferDialog, setShowReferDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectSemester, setNewSubjectSemester] = useState("Semester 1");
   const [showSubjectForm, setShowSubjectForm] = useState(false);
-  const [pdfFileName, setPdfFileName] = useState("");
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [newNote, setNewNote] = useState({
     title: "",
     subject: "",
     semester: "",
     category: "",
-    content: "",
   });
 
   const fetchNotes = useCallback(async () => {
@@ -262,13 +285,18 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const getNoteView = (note) => {
     const subject = note.tags?.[0] || "General";
     const meta = noteMeta[note.id] || {};
+    const legacyDocuments = [
+      meta.attachmentName || note.attachmentName,
+      ...(Array.isArray(meta.images) ? meta.images : []),
+    ].filter(Boolean);
+    const documents = Array.isArray(meta.documents) ? meta.documents : legacyDocuments;
     return {
       ...note,
       subject: meta.subject || subject,
       semester: meta.semester || subjectSemester(subject),
       category: meta.category || "Lecture",
-      attachmentName: meta.attachmentName || note.attachmentName || "",
-      images: Array.isArray(meta.images) ? meta.images : [],
+      attachmentName: meta.attachmentName || note.attachmentName || documents.find((fileName) => getFileExtension(fileName) === ".pdf") || "",
+      documents,
     };
   };
 
@@ -282,23 +310,27 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       const matchesSemester = filters.semester === "all" || note.semester === filters.semester;
       const matchesSubject = filters.subject === "all" || note.subject === filters.subject;
       const matchesCategory = filters.category === "all" || note.category === filters.category;
-      const matchesPdf =
-        filters.pdf === "all" ||
-        (filters.pdf === "with" && note.attachmentName) ||
-        (filters.pdf === "without" && !note.attachmentName);
-      return matchesSemester && matchesSubject && matchesCategory && matchesPdf;
+      return matchesSemester && matchesSubject && matchesCategory;
     });
   }, [noteViews, filters]);
+
+  const getFolderResources = (note) => {
+    const documents = Array.isArray(note.documents) ? note.documents : [note.attachmentName].filter(Boolean);
+    return {
+      documents,
+      total: documents.length,
+    };
+  };
 
   const subjectRows = useMemo(
     () =>
       allSubjectRecords.map((subject) => {
         const realNotes = noteViews.filter((note) => note.subject === subject.name);
-        const demo = demoSubjectCounts[subject.name] || { notes: 0, pdfs: 0 };
+        const demo = demoSubjectCounts[subject.name] || { notes: 0, documents: 0 };
         return {
           ...subject,
           notes: realNotes.length || demo.notes,
-          pdfs: realNotes.filter((note) => note.attachmentName).length || demo.pdfs,
+          documents: realNotes.reduce((count, note) => count + getFolderResources(note).total, 0) || demo.documents,
           canRemove: subjects.some((item) => item.name === subject.name),
         };
       }),
@@ -326,16 +358,17 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     if (filters.subject === subject) setFilters((prev) => ({ ...prev, subject: "all" }));
   };
 
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleDocumentChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
-    if (file.type !== "application/pdf") {
-      setError("Please select a PDF file.");
+    const invalidFiles = files.filter((file) => !isAllowedDocument(file.name));
+    if (invalidFiles.length > 0) {
+      setError("Please select only PDF, image, Word, PowerPoint, or Excel files.");
       return;
     }
 
-    setPdfFileName(file.name);
+    setSelectedDocuments((prev) => uniqueValues([...prev, ...files.map((file) => file.name)]));
     setError("");
   };
 
@@ -348,19 +381,25 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         return;
       }
 
+      if (selectedDocuments.length === 0) {
+        setError("Please upload at least one document.");
+        return;
+      }
+
       const subject = newNote.subject.trim();
       const data = await apiFetch("/notes", {
         method: "POST",
         body: {
           title: newNote.title,
-          content: newNote.content,
+          content: "",
           userId,
           tags: uniqueValues([subject]),
         },
       });
 
       if (subject) saveSubjects([...subjects, { name: subject, semester: newNote.semester || "Semester 1" }]);
-      const cleanNote = sanitizeNote({ ...data, attachmentName: pdfFileName });
+      const firstPdf = selectedDocuments.find((fileName) => getFileExtension(fileName) === ".pdf") || "";
+      const cleanNote = sanitizeNote({ ...data, content: "", attachmentName: firstPdf });
       setNotes((prev) => [cleanNote, ...prev]);
       saveNoteMeta({
         ...noteMeta,
@@ -368,11 +407,12 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           subject,
           semester: newNote.semester || "Semester 1",
           category: newNote.category || "Lecture",
-          attachmentName: pdfFileName,
+          attachmentName: firstPdf,
+          documents: selectedDocuments,
         },
       });
-      setNewNote({ title: "", subject: "", semester: "", category: "", content: "" });
-      setPdfFileName("");
+      setNewNote({ title: "", subject: "", semester: "", category: "" });
+      setSelectedDocuments([]);
       setError("");
     } catch (err) {
       setError(err.message || "Failed to create note");
@@ -397,17 +437,6 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     saveNoteMeta(nextMeta);
   };
 
-  const getFolderResources = (note) => {
-    const pdfs = note.attachmentName ? [note.attachmentName] : [];
-    const images = note.images || [];
-    return {
-      pdfs,
-      images,
-      noteItems: note.content ? ["Lecture summary"] : [],
-      total: pdfs.length + images.length + (note.content ? 1 : 0),
-    };
-  };
-
   const PageHeader = ({ title, description, action }) => (
     <div className="mb-9 flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -419,130 +448,157 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   );
 
   const renderAddNote = () => (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight">Add New Note</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Create a new lecture note with optional PDF attachment</p>
+        <h1 className="text-3xl font-extrabold tracking-tight">Add New Note Folder</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Create one folder and upload PDF, image, Word, PowerPoint, or Excel documents.</p>
       </div>
 
-      <form onSubmit={handleCreateNote} className="space-y-5">
-        <Card className="bg-card p-6 shadow-none">
-          <label className="block space-y-3">
-            <span className="text-sm font-bold">Note Title *</span>
-            <Input
-              value={newNote.title}
-              onChange={(event) => setNewNote((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="e.g., Data Structures - Stack and Queue"
-              required
-              className="bg-white"
-            />
-          </label>
-        </Card>
-
-        <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+        <form onSubmit={handleCreateNote} className="space-y-5">
           <Card className="bg-card p-6 shadow-none">
             <label className="block space-y-3">
-              <span className="text-sm font-bold">Subject *</span>
-              <select
-                value={newNote.subject}
-                onChange={(event) => {
-                  const subject = event.target.value;
-                  setNewNote((prev) => ({ ...prev, subject, semester: subjectSemester(subject) }));
-                }}
+              <span className="text-sm font-bold">Folder Name *</span>
+              <Input
+                value={newNote.title}
+                onChange={(event) => setNewNote((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="e.g., Data Structures - Stack and Queue"
                 required
-                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Select a subject</option>
-                {allSubjects.map((subject) => (
-                  <option key={subject} value={subject}>{subject}</option>
-                ))}
-              </select>
+                className="bg-white"
+              />
             </label>
           </Card>
 
-          <Card className="bg-card p-6 shadow-none">
-            <label className="block space-y-3">
-              <span className="text-sm font-bold">Semester *</span>
-              <select
-                value={newNote.semester}
-                onChange={(event) => setNewNote((prev) => ({ ...prev, semester: event.target.value }))}
-                required
-                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="" disabled>Select a semester</option>
-                {semesters.map((semester) => <option key={semester}>{semester}</option>)}
-              </select>
-            </label>
-          </Card>
-        </div>
-
-        <Card className="bg-card p-6 shadow-none">
-          <label className="block space-y-3">
-            <span className="text-sm font-bold">Category *</span>
-            <select
-              value={newNote.category}
-              onChange={(event) => setNewNote((prev) => ({ ...prev, category: event.target.value }))}
-              required
-              className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="" disabled>Select a category</option>
-              {categories.map((category) => <option key={category}>{category}</option>)}
-            </select>
-          </label>
-        </Card>
-
-        <Card className="bg-card p-6 shadow-none">
-          <label className="block space-y-3">
-            <span className="text-sm font-bold">Note Content *</span>
-            <Textarea
-              value={newNote.content}
-              onChange={(event) => setNewNote((prev) => ({ ...prev, content: event.target.value }))}
-              placeholder="Write your note content here..."
-              rows={7}
-              required
-              className="bg-white"
-            />
-          </label>
-        </Card>
-
-        <Card className="bg-card p-6 shadow-none">
-          <div className="space-y-4">
-            <span className="text-sm font-bold">Upload PDF (Optional)</span>
-            {pdfFileName ? (
-              <div className="flex items-center justify-between rounded-lg border border-border bg-white p-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold">{pdfFileName}</p>
-                  <p className="text-xs text-muted-foreground">PDF file selected</p>
-                </div>
-                <Button type="button" variant="ghost" size="icon" onClick={() => setPdfFileName("") }>
-                  <X size={16} />
-                </Button>
-              </div>
-            ) : (
-              <label className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white text-center hover:bg-muted">
-                <Upload className="mb-3 text-muted-foreground" size={24} />
-                <span className="text-sm font-semibold">Click to upload or drag and drop</span>
-                <span className="mt-1 text-xs text-muted-foreground">PDF files only</span>
-                <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleFileChange} />
+          <div className="grid gap-5 md:grid-cols-2">
+            <Card className="bg-card p-6 shadow-none">
+              <label className="block space-y-3">
+                <span className="text-sm font-bold">Subject *</span>
+                <select
+                  value={newNote.subject}
+                  onChange={(event) => {
+                    const subject = event.target.value;
+                    setNewNote((prev) => ({ ...prev, subject, semester: subjectSemester(subject) }));
+                  }}
+                  required
+                  className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Select a subject</option>
+                  {allSubjects.map((subject) => (
+                    <option key={subject} value={subject}>{subject}</option>
+                  ))}
+                </select>
               </label>
-            )}
-          </div>
-        </Card>
+            </Card>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Button type="submit">Save Note</Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setNewNote({ title: "", subject: "", semester: "", category: "", content: "" });
-              setPdfFileName("");
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+            <Card className="bg-card p-6 shadow-none">
+              <label className="block space-y-3">
+                <span className="text-sm font-bold">Semester *</span>
+                <select
+                  value={newNote.semester}
+                  onChange={(event) => setNewNote((prev) => ({ ...prev, semester: event.target.value }))}
+                  required
+                  className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="" disabled>Select a semester</option>
+                  {semesters.map((semester) => <option key={semester}>{semester}</option>)}
+                </select>
+              </label>
+            </Card>
+          </div>
+
+          <Card className="bg-card p-6 shadow-none">
+            <label className="block space-y-3">
+              <span className="text-sm font-bold">Category *</span>
+              <select
+                value={newNote.category}
+                onChange={(event) => setNewNote((prev) => ({ ...prev, category: event.target.value }))}
+                required
+                className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="" disabled>Select a category</option>
+                {categories.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </label>
+          </Card>
+
+          <Card className="bg-card p-6 shadow-none">
+            <div className="space-y-4">
+              <span className="text-sm font-bold">Upload Documents *</span>
+              <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-white text-center hover:bg-muted">
+                <Upload className="mb-3 text-muted-foreground" size={26} />
+                <span className="text-sm font-semibold">Click to upload or drag and drop</span>
+                <span className="mt-1 text-xs text-muted-foreground">PDF, images, Word, PowerPoint, Excel</span>
+                <input type="file" accept={documentAccept} multiple className="hidden" onChange={handleDocumentChange} />
+              </label>
+
+              {selectedDocuments.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-border bg-white p-3">
+                  {selectedDocuments.map((fileName) => (
+                    <div key={fileName} className="flex items-center justify-between gap-3 rounded-lg bg-muted p-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {getDocumentIcon(fileName, 20)}
+                        <p className="truncate text-sm font-bold">{displayFileName(fileName)}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSelectedDocuments((prev) => prev.filter((item) => item !== fileName))}
+                      >
+                        <X size={15} />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => setSelectedDocuments([])}>
+                    Clear Documents
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button type="submit">Save Folder</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNewNote({ title: "", subject: "", semester: "", category: "" });
+                setSelectedDocuments([]);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+
+        <aside className="space-y-4">
+          <Card className="bg-white p-5 shadow-soft">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-primary">
+              <Folder size={38} fill="currentColor" strokeWidth={1.5} />
+            </div>
+            <h2 className="text-lg font-extrabold">Folder Preview</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              This form creates one folder in My Notes. Inside the folder you will see the uploaded documents as file cards.
+            </p>
+            <div className="mt-5 space-y-3 text-sm">
+              {selectedDocuments.length > 0 ? (
+                selectedDocuments.map((fileName) => (
+                  <div key={fileName} className="flex items-center gap-3 rounded-lg bg-muted p-3">
+                    {getDocumentIcon(fileName, 18)}
+                    <span className="truncate font-semibold">{displayFileName(fileName)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
+                  <FileText className="text-muted-foreground" size={18} />
+                  <span className="font-semibold">Uploaded documents will appear here</span>
+                </div>
+              )}
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 
@@ -622,7 +678,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                 <th className="px-5 py-4">Subject</th>
                 <th className="px-5 py-4">Semester</th>
                 <th className="px-5 py-4 text-center">Notes</th>
-                <th className="px-5 py-4 text-center">PDFs</th>
+                <th className="px-5 py-4 text-center">Documents</th>
                 <th className="px-5 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -639,7 +695,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                   </td>
                   <td className="px-5 py-4 text-muted-foreground">{subject.semester}</td>
                   <td className="px-5 py-4 text-center font-bold">{subject.notes}</td>
-                  <td className="px-5 py-4 text-center font-bold">{subject.pdfs}</td>
+                  <td className="px-5 py-4 text-center font-bold">{subject.documents}</td>
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="ghost" size="icon" title="Edit subject">
@@ -729,7 +785,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <div>
                 <h1 className="text-3xl font-extrabold tracking-tight">{note.title}</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  This note folder contains the written note, lecture PDFs, images, and reference instructions.
+                  This note folder contains uploaded lecture documents.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Badge variant="secondary">{note.subject}</Badge>
@@ -745,84 +801,28 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         <div className="space-y-6">
           <section className="space-y-6">
             <Card className="bg-white p-6 shadow-soft">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <NotebookPen className="text-primary" size={22} />
-                  <h2 className="text-xl font-extrabold">Note About This Folder</h2>
-                </div>
-                <Button type="button" variant="outline" onClick={() => setShowReferDialog(true)}>
-                  <LinkIcon size={16} /> How To Refer
-                </Button>
-              </div>
-              <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground">
-                {note.content || "No written note has been added yet. Use this area to summarize what the folder contains and what each resource is for."}
-              </p>
-            </Card>
-
-            <Card className="bg-white p-6 shadow-soft">
               <div className="mb-5 flex items-center justify-between gap-4">
                 <p className="text-sm font-semibold text-muted-foreground">{resources.total} documents found</p>
                 <button type="button" className="rounded-full p-2 text-muted-foreground hover:bg-muted" aria-label="Refresh folder">
                   <RefreshCw size={18} />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {renderResourceTile({
-                  icon: <NotebookPen className="text-primary" size={38} />,
-                  title: "Written note",
-                  date: formatDate(note.createdAt),
-                })}
-
-                {resources.pdfs.length > 0 ? resources.pdfs.map((pdf) => renderResourceTile({
-                  icon: (
-                    <div className="relative">
-                      <FileText className="text-red-600" size={42} />
-                      <span className="absolute -top-1 left-1/2 -translate-x-1/2 rounded bg-red-600 px-1 py-0.5 text-[8px] font-bold text-white">PDF</span>
-                    </div>
-                  ),
-                  title: displayFileName(pdf),
-                  date: formatDate(note.createdAt),
-                })) : renderResourceTile({
-                  icon: <FileText className="text-muted-foreground" size={38} />,
-                  title: "No PDF uploaded",
-                  date: formatDate(note.createdAt),
-                })}
-
-                {resources.images.length > 0 ? resources.images.map((image) => renderResourceTile({
-                  icon: <ImageIcon className="text-primary" size={38} />,
-                  title: displayFileName(image),
-                  date: formatDate(note.createdAt),
-                })) : renderResourceTile({
-                  icon: <ImageIcon className="text-muted-foreground" size={38} />,
-                  title: "No images added",
-                  date: formatDate(note.createdAt),
-                })}
-              </div>
+              {resources.documents.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  {resources.documents.map((fileName) => renderResourceTile({
+                    icon: getDocumentIcon(fileName, 42),
+                    title: displayFileName(fileName),
+                    date: formatDate(note.createdAt),
+                  }))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border bg-muted p-8 text-center text-sm text-muted-foreground">
+                  No documents uploaded yet.
+                </div>
+              )}
             </Card>
           </section>
         </div>
-
-        {showReferDialog && (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/35 p-4 backdrop-blur-md">
-            <Card className="w-full max-w-md bg-white p-6 shadow-2xl">
-              <div className="mb-6 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <LinkIcon className="text-primary" size={24} />
-                  <h2 className="text-xl font-extrabold">How To Refer</h2>
-                </div>
-                <Button type="button" variant="ghost" size="icon" onClick={() => setShowReferDialog(false)}>
-                  <X size={18} />
-                </Button>
-              </div>
-              <ol className="space-y-4 text-base leading-7 text-muted-foreground">
-                <li><strong className="text-foreground">1.</strong> Read the written note first for the short explanation.</li>
-                <li><strong className="text-foreground">2.</strong> Open the PDF for full lecture slides or handout details.</li>
-                <li><strong className="text-foreground">3.</strong> Check images for diagrams, screenshots, or visual examples.</li>
-                <li><strong className="text-foreground">4.</strong> Use subject, semester, and category badges to find related folders.</li>
-              </ol>
-            </Card>
-          </div>
-        )}
       </div>
     );
   };
@@ -833,10 +833,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         renderFolderView(selectedNote)
       ) : (
       <>
-      <PageHeader title="My Notes" description="Filter notes by semester, subject, category, and PDF availability" />
+      <PageHeader title="My Notes" description="Filter note folders by semester, subject, and category" />
 
       <Card className="mb-6 bg-card p-5 shadow-none">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <label className="space-y-2">
             <span className="text-xs font-bold">Semester</span>
             <select value={filters.semester} onChange={(event) => setFilters((prev) => ({ ...prev, semester: event.target.value }))} className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
@@ -858,18 +858,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               {categories.map((category) => <option key={category}>{category}</option>)}
             </select>
           </label>
-          <label className="space-y-2">
-            <span className="text-xs font-bold">PDF</span>
-            <select value={filters.pdf} onChange={(event) => setFilters((prev) => ({ ...prev, pdf: event.target.value }))} className="h-10 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-ring">
-              <option value="all">All notes</option>
-              <option value="with">With PDF</option>
-              <option value="without">Without PDF</option>
-            </select>
-          </label>
         </div>
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{filteredNotes.length} documents found</span>
-          <button type="button" className="flex items-center gap-2 font-semibold text-primary" onClick={() => setFilters({ semester: "all", subject: "all", category: "all", pdf: "all" })}>
+          <span>{filteredNotes.length} folders found</span>
+          <button type="button" className="flex items-center gap-2 font-semibold text-primary" onClick={() => setFilters({ semester: "all", subject: "all", category: "all" })}>
             <RefreshCw size={15} /> Reset filters
           </button>
         </div>
@@ -896,10 +888,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const recentNote = filteredNotes[0] || noteViews[0];
 
   const renderDashboard = () => {
-    const totalPdfs = noteViews.filter((note) => note.attachmentName).length;
+    const totalDocuments = noteViews.reduce((count, note) => count + getFolderResources(note).total, 0);
     const statCards = [
       { label: "Total Notes", value: notes.length || 24, Icon: BookOpen },
-      { label: "Total PDFs", value: totalPdfs || 18, Icon: FileText },
+      { label: "Total Documents", value: totalDocuments || 18, Icon: FileText },
       { label: "Subjects", value: allSubjects.length || 6, Icon: Grid3X3 },
     ];
 
@@ -936,13 +928,12 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-lg font-extrabold">{recentNote.title}</h3>
-                  <p className="mt-3 text-base text-muted-foreground">{recentNote.content || "No note content added."}</p>
                   <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <span className="rounded-full bg-muted px-3 py-1">{recentNote.subject || "General"}</span>
                     <span className="flex items-center gap-1"><Calendar size={14} />{formatDate(recentNote.createdAt)}</span>
-                    {recentNote.attachmentName && (
-                      <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">PDF Available</span>
-                    )}
+                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">
+                      {getFolderResources(recentNote).total} documents
+                    </span>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -958,11 +949,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="text-lg font-extrabold">Data Structures - Stack and Queue</h3>
-                  <p className="mt-3 text-base text-muted-foreground">Notes on stack and queue implementations</p>
                   <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <span className="rounded-full bg-muted px-3 py-1">Data Structures</span>
                     <span>1/15/2024</span>
-                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">PDF Available</span>
+                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">3 documents</span>
                   </div>
                 </div>
                 <div className="flex gap-2">

@@ -69,18 +69,18 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               <BookOpen size={28} />
             </div>
             <h1 className="mt-8 max-w-lg text-5xl font-extrabold leading-tight tracking-tight">
-              Organize every lecture note before it gets lost.
+              Organize every lecture document before it gets lost.
             </h1>
             <p className="mt-5 max-w-md text-base text-primary-foreground/80">
-              LecKeep is built for short notes, tagged subjects, and lecture PDFs in a clean student workspace.
+              LecKeep is built for document folders, tagged subjects, and lecture files in a clean student workspace.
             </p>
           </div>
 
           <div className="relative grid grid-cols-2 gap-4">
             <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
               <FileText className="mb-4" size={24} />
-              <p className="text-sm font-semibold">PDF-friendly structure</p>
-              <p className="mt-1 text-xs text-primary-foreground/70">Prepare notes around lecture files.</p>
+              <p className="text-sm font-semibold">Document-friendly structure</p>
+              <p className="mt-1 text-xs text-primary-foreground/70">Prepare folders around lecture files.</p>
             </div>
             <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
               <Lock className="mb-4" size={24} />
@@ -99,8 +99,8 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 {isLogin
-                  ? "Login to manage lecture notes and summaries."
-                  : "Sign up to start your lecture note library."}
+                  ? "Login to manage lecture document folders."
+                  : "Sign up to start your lecture document library."}
               </p>
             </div>
           </div>
