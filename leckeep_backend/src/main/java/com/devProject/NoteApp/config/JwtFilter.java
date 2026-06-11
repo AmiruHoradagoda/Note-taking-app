@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.devProject.NoteApp.service.JWTService;
+import com.devProject.NoteApp.service.impl.JWTServiceImpl;
 
 import java.io.IOException;
 
@@ -24,7 +24,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
 
     @Autowired
-    private JWTService jwtService;
+    private JWTServiceImpl jwtService;
 
     @Autowired
     private UserDetailsService userDetailsService;
