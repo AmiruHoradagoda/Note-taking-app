@@ -1,8 +1,10 @@
 package com.devProject.NoteApp.service.impl;
 
+import com.devProject.NoteApp.dto.requests.NoteFolderRequestDto;
 import com.devProject.NoteApp.dto.response.NoteFolderResponseDto;
 import com.devProject.NoteApp.dto.response.pagination.NoteFolderPaginateResponseDto;
 import com.devProject.NoteApp.enums.FolderVisibility;
+import com.devProject.NoteApp.exception.FolderNotFoundException;
 import com.devProject.NoteApp.mappers.NoteFolderMapper;
 import com.devProject.NoteApp.model.NoteFolder;
 import com.devProject.NoteApp.model.UserPrincipal;
@@ -60,23 +62,38 @@ public class FolderServiceImpl implements FolderService {
     }
 
     @Override
-    public String getFolderById(String id) {
-        return "GET folder " + id;
+    public NoteFolderResponseDto getFolderById(String id) {
+        NoteFolder noteFolder = findFolderOrThrow(id);
+        requireFolderReadAccess(noteFolder);
+        return noteFolderMapper.toNoteFolderResponseDto(noteFolder);
     }
 
     @Override
-    public String createFolder() {
-        return "POST folder";
+    public NoteFolderResponseDto createFolder(NoteFolderRequestDto request) {
+        validateFolderRequest(request);
+
+        NoteFolder noteFolder = noteFolderMapper.toNoteFolder(request, requireCurrentUserId());
+        NoteFolder savedFolder = noteFolderRepository.save(noteFolder);
+        return noteFolderMapper.toNoteFolderResponseDto(savedFolder);
     }
 
     @Override
-    public String updateFolder(String id) {
-        return "PUT folder " + id;
+    public NoteFolderResponseDto updateFolder(String id, NoteFolderRequestDto request) {
+        validateFolderRequest(request);
+
+        NoteFolder noteFolder = findFolderOrThrow(id);
+        requireFolderOwner(noteFolder);
+        noteFolderMapper.updateNoteFolder(noteFolder, request);
+
+        NoteFolder updatedFolder = noteFolderRepository.save(noteFolder);
+        return noteFolderMapper.toNoteFolderResponseDto(updatedFolder);
     }
 
     @Override
-    public String deleteFolder(String id) {
-        return "DELETE folder " + id;
+    public void deleteFolder(String id) {
+        NoteFolder noteFolder = findFolderOrThrow(id);
+        requireFolderOwner(noteFolder);
+        noteFolderRepository.delete(noteFolder);
     }
 
     private Pageable buildPageable(int page, int size) {
@@ -102,5 +119,36 @@ public class FolderServiceImpl implements FolderService {
         }
 
         throw new IllegalStateException("Authenticated user is required");
+    }
+
+    private NoteFolder findFolderOrThrow(String id) {
+        return noteFolderRepository.findById(id)
+                .orElseThrow(() -> new FolderNotFoundException("Folder not found with id: " + id));
+    }
+
+    private void validateFolderRequest(NoteFolderRequestDto request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Folder request is required");
+        }
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Folder title is required");
+        }
+        if (request.getVisibility() == FolderVisibility.GROUP
+                && (request.getGroupId() == null || request.getGroupId().isBlank())) {
+            throw new IllegalArgumentException("Group id is required for group folders");
+        }
+    }
+
+    private void requireFolderReadAccess(NoteFolder noteFolder) {
+        if (noteFolder.getVisibility() == FolderVisibility.PRIVATE) {
+            requireFolderOwner(noteFolder);
+        }
+    }
+
+    private void requireFolderOwner(NoteFolder noteFolder) {
+        String currentUserId = requireCurrentUserId();
+        if (!currentUserId.equals(noteFolder.getOwnerId())) {
+            throw new SecurityException("You do not have access to this folder");
+        }
     }
 }

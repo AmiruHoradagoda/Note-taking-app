@@ -1,12 +1,16 @@
 package com.devProject.NoteApp.controller;
 
+import com.devProject.NoteApp.dto.requests.NoteFolderRequestDto;
+import com.devProject.NoteApp.dto.response.NoteFolderResponseDto;
 import com.devProject.NoteApp.dto.response.pagination.NoteFolderPaginateResponseDto;
 import com.devProject.NoteApp.service.FolderService;
+import com.devProject.NoteApp.utils.StandardResponseDto;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,31 +25,36 @@ public class FolderController {
     }
 
     @GetMapping
-    public NoteFolderPaginateResponseDto getFolders(
+    public StandardResponseDto getFolders(
             @RequestParam(required = false, defaultValue = "private") String scope,
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "10") int size
     ) {
-        return folderService.getFolders(scope, page, size);
+        NoteFolderPaginateResponseDto folders = folderService.getFolders(scope, page, size);
+        return new StandardResponseDto(200, "Folders fetched", folders);
     }
 
     @GetMapping("/{id}")
-    public String getFolderById(@PathVariable String id) {
-        return folderService.getFolderById(id);
+    public StandardResponseDto getFolderById(@PathVariable String id) {
+        NoteFolderResponseDto folder = folderService.getFolderById(id);
+        return new StandardResponseDto(200, "Folder fetched", folder);
     }
 
     @PostMapping
-    public String createFolder() {
-        return folderService.createFolder();
+    public StandardResponseDto createFolder(@RequestBody NoteFolderRequestDto request) {
+        NoteFolderResponseDto folder = folderService.createFolder(request);
+        return new StandardResponseDto(201, "Folder created", folder);
     }
 
     @PutMapping("/{id}")
-    public String updateFolder(@PathVariable String id) {
-        return folderService.updateFolder(id);
+    public StandardResponseDto updateFolder(@PathVariable String id, @RequestBody NoteFolderRequestDto request) {
+        NoteFolderResponseDto folder = folderService.updateFolder(id, request);
+        return new StandardResponseDto(200, "Folder updated", folder);
     }
 
     @DeleteMapping("/{id}")
-    public String deleteFolder(@PathVariable String id) {
-        return folderService.deleteFolder(id);
+    public StandardResponseDto deleteFolder(@PathVariable String id) {
+        folderService.deleteFolder(id);
+        return new StandardResponseDto(200, "Folder deleted", null);
     }
 }

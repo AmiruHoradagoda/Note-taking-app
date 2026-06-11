@@ -1,15 +1,17 @@
 package com.devProject.NoteApp.service;
 
+import com.devProject.NoteApp.dto.requests.NoteFolderRequestDto;
+import com.devProject.NoteApp.dto.response.NoteFolderResponseDto;
 import com.devProject.NoteApp.dto.response.pagination.NoteFolderPaginateResponseDto;
 
 public interface FolderService {
     NoteFolderPaginateResponseDto getFolders(String scope, int page, int size);
 
-    String getFolderById(String id);
+    NoteFolderResponseDto getFolderById(String id);
 
-    String createFolder();
+    NoteFolderResponseDto createFolder(NoteFolderRequestDto request);
 
-    String updateFolder(String id);
+    NoteFolderResponseDto updateFolder(String id, NoteFolderRequestDto request);
 
-    String deleteFolder(String id);
+    void deleteFolder(String id);
 }

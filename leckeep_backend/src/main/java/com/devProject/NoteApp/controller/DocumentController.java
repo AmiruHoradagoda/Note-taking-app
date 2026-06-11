@@ -1,5 +1,6 @@
 package com.devProject.NoteApp.controller;
 
+import com.devProject.NoteApp.utils.StandardResponseDto;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,27 +13,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class DocumentController {
 
     @PostMapping("/folders/{folderId}/documents")
-    public String uploadDocument(@PathVariable String folderId) {
-        return "POST document for folder " + folderId;
+    public StandardResponseDto uploadDocument(@PathVariable String folderId) {
+        return new StandardResponseDto(200, "Document upload action completed", "POST document for folder " + folderId);
     }
 
     @GetMapping("/folders/{folderId}/documents")
-    public String getFolderDocuments(@PathVariable String folderId) {
-        return "GET documents for folder " + folderId;
+    public StandardResponseDto getFolderDocuments(@PathVariable String folderId) {
+        return new StandardResponseDto(200, "Folder documents fetched", "GET documents for folder " + folderId);
     }
 
     @GetMapping("/documents/{documentId}/download")
-    public String downloadDocument(@PathVariable String documentId) {
-        return "GET document download " + documentId;
+    public StandardResponseDto downloadDocument(@PathVariable String documentId) {
+        return new StandardResponseDto(200, "Document download action completed", "GET document download " + documentId);
     }
 
     @GetMapping("/documents/{documentId}/preview")
-    public String previewDocument(@PathVariable String documentId) {
-        return "GET document preview " + documentId;
+    public StandardResponseDto previewDocument(@PathVariable String documentId) {
+        return new StandardResponseDto(200, "Document preview action completed", "GET document preview " + documentId);
     }
 
     @DeleteMapping("/documents/{documentId}")
-    public String deleteDocument(@PathVariable String documentId) {
-        return "DELETE document " + documentId;
+    public StandardResponseDto deleteDocument(@PathVariable String documentId) {
+        return new StandardResponseDto(200, "Document deleted", "DELETE document " + documentId);
     }
 }

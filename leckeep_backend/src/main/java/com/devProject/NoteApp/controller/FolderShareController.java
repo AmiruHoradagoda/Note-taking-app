@@ -1,5 +1,6 @@
 package com.devProject.NoteApp.controller;
 
+import com.devProject.NoteApp.utils.StandardResponseDto;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,12 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class FolderShareController {
 
     @PostMapping
-    public String shareFolder(@PathVariable String folderId) {
-        return "POST share for folder " + folderId;
+    public StandardResponseDto shareFolder(@PathVariable String folderId) {
+        return new StandardResponseDto(200, "Folder share action completed", "POST share for folder " + folderId);
     }
 
     @DeleteMapping
-    public String removeFolderShare(@PathVariable String folderId) {
-        return "DELETE share for folder " + folderId;
+    public StandardResponseDto removeFolderShare(@PathVariable String folderId) {
+        return new StandardResponseDto(200, "Folder share removed", "DELETE share for folder " + folderId);
     }
 }

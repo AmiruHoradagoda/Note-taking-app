@@ -1,5 +1,6 @@
 package com.devProject.NoteApp.controller;
 
+import com.devProject.NoteApp.utils.StandardResponseDto;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,22 +14,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class SubjectController {
 
     @GetMapping
-    public String getSubjects() {
-        return "GET subjects";
+    public StandardResponseDto getSubjects() {
+        return new StandardResponseDto(200, "Subjects fetched", "GET subjects");
     }
 
     @PostMapping
-    public String createSubject() {
-        return "POST subject";
+    public StandardResponseDto createSubject() {
+        return new StandardResponseDto(201, "Subject created", "POST subject");
     }
 
     @PutMapping("/{id}")
-    public String updateSubject(@PathVariable String id) {
-        return "PUT subject " + id;
+    public StandardResponseDto updateSubject(@PathVariable String id) {
+        return new StandardResponseDto(200, "Subject updated", "PUT subject " + id);
     }
 
     @DeleteMapping("/{id}")
-    public String deleteSubject(@PathVariable String id) {
-        return "DELETE subject " + id;
+    public StandardResponseDto deleteSubject(@PathVariable String id) {
+        return new StandardResponseDto(200, "Subject deleted", "DELETE subject " + id);
     }
 }
