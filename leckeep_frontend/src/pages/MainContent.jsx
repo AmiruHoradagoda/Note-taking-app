@@ -42,102 +42,102 @@ const visibilityOptions = [
 ];
 
 const defaultSubjects = [
-  { name: "Data Structures", semester: "Semester 1" },
-  { name: "Programming Basics", semester: "Semester 1" },
-  { name: "Software Architecture", semester: "Semester 2" },
-  { name: "Web Development", semester: "Semester 2" },
-  { name: "Database Systems", semester: "Semester 3" },
-  { name: "Cloud Computing", semester: "Semester 3" },
+  { name: "Digital Logic Design", semester: "Semester 1" },
+  { name: "Computer Architecture", semester: "Semester 2" },
+  { name: "Microprocessors and Interfacing", semester: "Semester 3" },
+  { name: "Operating Systems", semester: "Semester 4" },
+  { name: "Computer Networks", semester: "Semester 5" },
+  { name: "Embedded Systems", semester: "Semester 6" },
 ];
 
 const defaultGroups = [
   {
     id: "group-demo-1",
-    name: "SE Lecture Circle",
-    admin: "Nimal Perera",
-    members: ["Nimal Perera", "Ayesha Fernando", "Kavindu Silva"],
+    name: "Embedded Systems Lab Team",
+    admin: "Ayesha Fernando",
+    members: ["Ayesha Fernando", "You", "Kavindu Silva", "Nimal Perera"],
   },
   {
     id: "group-demo-2",
-    name: "Database Revision Team",
-    admin: "Ayesha Fernando",
-    members: ["Ayesha Fernando", "You", "Dinuka Jayasinghe"],
+    name: "Network Security Project Crew",
+    admin: "Kavindu Silva",
+    members: ["Kavindu Silva", "You", "Dinuka Jayasinghe", "Sahan Perera"],
   },
 ];
 
 const demoSubjectCounts = {
-  "Data Structures": { notes: 4, documents: 3 },
-  "Programming Basics": { notes: 3, documents: 3 },
-  "Software Architecture": { notes: 3, documents: 3 },
-  "Web Development": { notes: 3, documents: 3 },
-  "Database Systems": { notes: 3, documents: 2 },
-  "Cloud Computing": { notes: 3, documents: 2 },
+  "Digital Logic Design": { notes: 4, documents: 5 },
+  "Computer Architecture": { notes: 5, documents: 6 },
+  "Microprocessors and Interfacing": { notes: 4, documents: 5 },
+  "Operating Systems": { notes: 4, documents: 4 },
+  "Computer Networks": { notes: 5, documents: 5 },
+  "Embedded Systems": { notes: 6, documents: 7 },
 };
 
 const dummyNotes = [
   {
-    id: "demo-1",
-    title: "eTicket_352453516943912",
-    content: "Lecture ticket and quick reference PDF for data structures practical session.",
-    createdAt: "2025-11-21T00:00:00.000Z",
+    id: "ce-demo-1",
+    title: "RISC-V Pipeline Hazard Notes",
+    content: "Forwarding, stalls, and branch prediction summary for the five-stage CPU pipeline lab.",
+    createdAt: "2026-05-22T00:00:00.000Z",
     userId: "demo",
-    tags: ["Data Structures"],
-    attachmentName: "eTicket_352453516943912.pdf",
+    tags: ["Computer Architecture"],
+    attachmentName: "riscv-pipeline-hazards.pdf",
   },
   {
-    id: "demo-2",
-    title: "M0195",
-    content: "Programming basics lecture handout with practice exercises.",
-    createdAt: "2025-11-21T00:00:00.000Z",
+    id: "ce-demo-2",
+    title: "Verilog ALU Simulation Pack",
+    content: "ALU opcode table, testbench traces, and waveform screenshots for Digital Logic Design.",
+    createdAt: "2026-05-18T00:00:00.000Z",
     userId: "demo",
-    tags: ["Programming Basics"],
-    attachmentName: "M0195.pdf",
+    tags: ["Digital Logic Design"],
+    attachmentName: "verilog-alu-testbench.pdf",
   },
   {
-    id: "demo-3",
-    title: "EDDS Basic User Support - ISD",
-    content: "Support documentation and lecture summary for user support workflows.",
-    createdAt: "2025-11-21T00:00:00.000Z",
+    id: "ce-demo-3",
+    title: "ARM Cortex-M Sensor Node Log",
+    content: "GPIO setup, ADC sampling notes, interrupt timing, and UART debug captures.",
+    createdAt: "2026-05-12T00:00:00.000Z",
     userId: "demo",
-    tags: ["Software Architecture"],
-    attachmentName: "EDDS Basic User Support - ISD.pdf",
+    tags: ["Embedded Systems"],
+    attachmentName: "cortex-m-sensor-node.pdf",
   },
   {
-    id: "demo-4",
-    title: "Database Normalization Summary",
-    content: "1NF, 2NF, and 3NF examples with short explanations.",
-    createdAt: "2025-10-14T00:00:00.000Z",
+    id: "ce-demo-4",
+    title: "Round-Robin Scheduler Comparison",
+    content: "CPU scheduling metrics comparing FCFS, SJF, priority, and round-robin workloads.",
+    createdAt: "2026-04-30T00:00:00.000Z",
     userId: "demo",
-    tags: ["Database Systems"],
+    tags: ["Operating Systems"],
     attachmentName: "",
   },
   {
-    id: "demo-5",
-    title: "Cloud Deployment Checklist",
-    content: "Steps for deploying frontend and backend services in the cloud.",
-    createdAt: "2025-09-30T00:00:00.000Z",
+    id: "ce-demo-5",
+    title: "TCP Congestion Control Lab",
+    content: "Packet capture analysis for slow start, congestion avoidance, and retransmission behavior.",
+    createdAt: "2026-04-21T00:00:00.000Z",
     userId: "demo",
-    tags: ["Cloud Computing"],
-    attachmentName: "cloud-deployment-checklist.pdf",
+    tags: ["Computer Networks"],
+    attachmentName: "tcp-congestion-lab.pdf",
   },
   {
-    id: "demo-6",
-    title: "React Component Notes",
-    content: "Document set about props, state, and reusable component structure.",
-    createdAt: "2025-08-18T00:00:00.000Z",
+    id: "ce-demo-6",
+    title: "PCB Bring-up Checklist",
+    content: "Power rail checks, oscillator validation, SWD programming, and peripheral smoke tests.",
+    createdAt: "2026-04-08T00:00:00.000Z",
     userId: "demo",
-    tags: ["Web Development"],
+    tags: ["Microprocessors and Interfacing"],
     attachmentName: "",
   },
 ];
 
 const dummyNoteMeta = {
-  "demo-1": { subject: "Data Structures", semester: "Semester 1", category: "Lecture", visibility: "global", author: "Ayesha Fernando", attachmentName: "eTicket_352453516943912.pdf", documents: ["eTicket_352453516943912.pdf", "stack-queue-diagram.png", "lab-whiteboard.jpg"] },
-  "demo-2": { subject: "Programming Basics", semester: "Semester 1", category: "Tutorial", visibility: "private", author: "You", attachmentName: "M0195.pdf", documents: ["M0195.pdf", "flowchart-example.png", "programming-basics.docx"] },
-  "demo-3": { subject: "Software Architecture", semester: "Semester 2", category: "Lecture", visibility: "group", groupId: "group-demo-1", author: "Nimal Perera", attachmentName: "EDDS Basic User Support - ISD.pdf", documents: ["EDDS Basic User Support - ISD.pdf", "support-workflow.png", "architecture-slides.pptx"] },
-  "demo-4": { subject: "Database Systems", semester: "Semester 3", category: "Summary", visibility: "group", sharedByMe: true, sharedTo: "group", groupId: "group-demo-2", author: "You", attachmentName: "", documents: ["normalization-table.png", "database-normalization.xlsx"] },
-  "demo-5": { subject: "Cloud Computing", semester: "Semester 3", category: "Assignment", visibility: "global", author: "Kavindu Silva", attachmentName: "cloud-deployment-checklist.pdf", documents: ["cloud-deployment-checklist.pdf", "deployment-pipeline.png"] },
-  "demo-6": { subject: "Web Development", semester: "Semester 2", category: "Exam Notes", visibility: "private", author: "You", attachmentName: "", documents: ["component-tree.png", "state-props-sketch.jpg", "react-revision.docx"] },
+  "ce-demo-1": { subject: "Computer Architecture", semester: "Semester 2", category: "Lecture", visibility: "global", author: "Ayesha Fernando", attachmentName: "riscv-pipeline-hazards.pdf", documents: ["riscv-pipeline-hazards.pdf", "pipeline-datapath.png", "hazard-unit-truth-table.xlsx"] },
+  "ce-demo-2": { subject: "Digital Logic Design", semester: "Semester 1", category: "Tutorial", visibility: "private", author: "You", attachmentName: "verilog-alu-testbench.pdf", documents: ["verilog-alu-testbench.pdf", "alu-waveform.png", "logic-gates-reference.docx"] },
+  "ce-demo-3": { subject: "Embedded Systems", semester: "Semester 6", category: "Lecture", visibility: "group", groupId: "group-demo-1", author: "Nimal Perera", attachmentName: "cortex-m-sensor-node.pdf", documents: ["cortex-m-sensor-node.pdf", "adc-sampling-trace.png", "uart-debug-log.xlsx"] },
+  "ce-demo-4": { subject: "Operating Systems", semester: "Semester 4", category: "Summary", visibility: "group", sharedByMe: true, sharedTo: "group", groupId: "group-demo-2", author: "You", attachmentName: "", documents: ["scheduler-gantt-chart.png", "os-scheduling-summary.docx"] },
+  "ce-demo-5": { subject: "Computer Networks", semester: "Semester 5", category: "Assignment", visibility: "global", author: "Kavindu Silva", attachmentName: "tcp-congestion-lab.pdf", documents: ["tcp-congestion-lab.pdf", "wireshark-capture.png", "network-topology.pptx"] },
+  "ce-demo-6": { subject: "Microprocessors and Interfacing", semester: "Semester 3", category: "Exam Notes", visibility: "private", author: "You", attachmentName: "", documents: ["pcb-bringup-checklist.docx", "power-rail-measurements.xlsx", "swd-programming-notes.png"] },
 };
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
@@ -149,8 +149,14 @@ const sanitizeNote = (note) => ({
   attachmentName: note?.attachmentName || note?.pdfName || "",
 });
 
+const hiddenPlaceholderTitles = new Set(["njnj"]);
+const isHiddenPlaceholderNote = (note) =>
+  hiddenPlaceholderTitles.has((note?.title || "").trim().toLowerCase());
+
 const sanitizeNotes = (noteList) =>
-  Array.isArray(noteList) ? noteList.map(sanitizeNote) : [];
+  Array.isArray(noteList)
+    ? noteList.map(sanitizeNote).filter((note) => !isHiddenPlaceholderNote(note))
+    : [];
 
 const subjectStorageKey = () => `leckeeper-subjects-${getUserId() || "guest"}`;
 const noteMetaStorageKey = () => `leckeeper-note-meta-${getUserId() || "guest"}`;
@@ -605,7 +611,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     <div className="max-w-5xl">
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight">Add New Note Folder</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Create one folder and upload PDF, image, Word, PowerPoint, or Excel documents.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Create a Computer Engineering folder and upload lab reports, circuit diagrams, captures, or revision files.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
@@ -616,7 +622,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <Input
                 value={newNote.title}
                 onChange={(event) => setNewNote((prev) => ({ ...prev, title: event.target.value }))}
-                placeholder="e.g., Data Structures - Stack and Queue"
+                placeholder="e.g., FPGA UART Controller Lab"
                 required
                 className="bg-white"
               />
@@ -843,7 +849,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <Input
                 value={newSubjectName}
                 onChange={(event) => setNewSubjectName(event.target.value)}
-                placeholder="e.g., Advanced Algorithms"
+                placeholder="e.g., VLSI Design"
                 className="bg-white"
               />
             </label>
@@ -1078,7 +1084,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               <div>
                 <h1 className="text-3xl font-extrabold tracking-tight">{note.title}</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  This note folder contains uploaded lecture documents.
+                  This folder contains uploaded engineering documents and lab resources.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Badge variant="secondary">{note.subject}</Badge>
@@ -1221,7 +1227,13 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     </div>
   );
 
-  const recentNote = filteredNotes[0] || noteViews[0];
+  const recentNotes = useMemo(
+    () =>
+      [...filteredNotes]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 3),
+    [filteredNotes]
+  );
 
   const renderGroups = () => (
     <div>
@@ -1305,23 +1317,26 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const renderDashboard = () => {
     const totalDocuments = noteViews.reduce((count, note) => count + getFolderResources(note).total, 0);
+    const sharedFolders = noteViews.filter((note) => note.visibility === "global" || note.visibility === "group" || note.sharedByMe);
     const statCards = [
-      { label: "Total Notes", value: notes.length || 24, Icon: BookOpen },
-      { label: "Total Documents", value: totalDocuments || 18, Icon: FileText },
-      { label: "Subjects", value: allSubjects.length || 6, Icon: Grid3X3 },
+      { label: "Note Folders", value: noteViews.length || notes.length || 6, detail: `${totalDocuments || 17} uploaded documents`, Icon: Folder },
+      { label: "Shared Notes", value: sharedFolders.length || 4, detail: "Global and group folders", Icon: Share2 },
+      { label: "Study Groups", value: groups.length || 2, detail: "Classmate collaboration", Icon: Users },
+      { label: "Subjects", value: allSubjects.length || 6, detail: "Organized by semester", Icon: Grid3X3 },
     ];
 
     return (
       <div>
-        <PageHeader title="Dashboard" description="Welcome back! Here's your study overview." />
+        <PageHeader title="Dashboard" description="Keep lecture notes, shared folders, and study-group resources organized by subject." />
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {statCards.map(({ label, value, Icon }) => (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map(({ label, value, detail, Icon }) => (
             <Card key={label} className="bg-card p-6 shadow-soft">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">{label}</p>
                   <p className="mt-2 text-4xl font-extrabold tracking-tight">{value}</p>
+                  <p className="mt-2 text-xs font-semibold text-muted-foreground">{detail}</p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-primary">
                   <Icon size={24} />
@@ -1333,49 +1348,67 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
         <section className="mt-9">
           <div className="mb-5 flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-extrabold tracking-tight">Recent Notes</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight">Recent Study Folders</h2>
             <Button type="button" onClick={() => window.dispatchEvent(new CustomEvent("leckeeper:navigate-add"))}>
               + Add New Note
             </Button>
           </div>
 
-          {recentNote ? (
-            <Card className="bg-card p-6 shadow-soft">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h3 className="text-lg font-extrabold">{recentNote.title}</h3>
-                  <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="rounded-full bg-muted px-3 py-1">{recentNote.subject || "General"}</span>
-                    <span className="flex items-center gap-1"><Calendar size={14} />{formatDate(recentNote.createdAt)}</span>
-                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">
-                      {getFolderResources(recentNote).total} documents
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" size="sm">View</Button>
-                  <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50" onClick={() => handleNoteDelete(recentNote.id)}>
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </div>
-            </Card>
+          {recentNotes.length > 0 ? (
+            <div className="grid gap-5 lg:grid-cols-3">
+              {recentNotes.map((note) => {
+                const scope = noteScopes.find((item) => item.id === note.visibility);
+                const accessText =
+                  note.visibility === "group"
+                    ? `Shared in ${groupName(note.groupId)}`
+                    : note.visibility === "global"
+                    ? "Visible to all students"
+                    : note.sharedByMe
+                    ? "Shared by you"
+                    : "Private folder";
+
+                return (
+                  <Card key={note.id} className="bg-card p-6 shadow-soft">
+                    <div className="flex h-full flex-col">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+                          <FileText size={21} />
+                        </div>
+                        <Badge variant="outline">{scope?.label || "Private"}</Badge>
+                      </div>
+                      <h3 className="line-clamp-2 min-h-14 text-lg font-extrabold leading-7">{note.title}</h3>
+                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{note.content}</p>
+                      <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span className="rounded-full bg-muted px-3 py-1">{note.subject || "General"}</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar size={14} />
+                          {formatDate(note.createdAt)}
+                        </span>
+                      </div>
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5 text-xs font-semibold text-muted-foreground">
+                        <span>{accessText}</span>
+                        <span className="rounded-full bg-secondary px-3 py-1 text-primary">
+                          {getFolderResources(note).total} docs
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
             <Card className="bg-card p-6 shadow-soft">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-extrabold">Data Structures - Stack and Queue</h3>
+                  <h3 className="text-lg font-extrabold">Semester 4 Revision Folder</h3>
                   <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="rounded-full bg-muted px-3 py-1">Data Structures</span>
-                    <span>1/15/2024</span>
-                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">3 documents</span>
+                    <span className="rounded-full bg-muted px-3 py-1">Operating Systems</span>
+                    <span>Jun 1, 2026</span>
+                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">Shared with group</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" size="sm">View</Button>
-                  <Button type="button" variant="outline" size="sm" className="border-red-200 text-destructive hover:bg-red-50">
-                    <Trash2 size={16} />
-                  </Button>
                 </div>
               </div>
             </Card>

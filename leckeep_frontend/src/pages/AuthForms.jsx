@@ -69,23 +69,23 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               <BookOpen size={28} />
             </div>
             <h1 className="mt-8 max-w-lg text-5xl font-extrabold leading-tight tracking-tight">
-              Organize every lecture document before it gets lost.
+              Keep every note, document, and study resource organized in one secure workspace.
             </h1>
             <p className="mt-5 max-w-md text-base text-primary-foreground/80">
-              LecKeep is built for document folders, tagged subjects, and lecture files in a clean student workspace.
+              LecKeep helps you manage personal notes, uploaded files, subjects, and shared folders without losing track of important study material.
             </p>
           </div>
 
           <div className="relative grid grid-cols-2 gap-4">
             <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
               <FileText className="mb-4" size={24} />
-              <p className="text-sm font-semibold">Document-friendly structure</p>
-              <p className="mt-1 text-xs text-primary-foreground/70">Prepare folders around lecture files.</p>
+              <p className="text-sm font-semibold">Structured note library</p>
+              <p className="mt-1 text-xs text-primary-foreground/70">Organize files by subject, semester, and folder.</p>
             </div>
             <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
               <Lock className="mb-4" size={24} />
-              <p className="text-sm font-semibold">Private account</p>
-              <p className="mt-1 text-xs text-primary-foreground/70">Your notes stay under your login.</p>
+              <p className="text-sm font-semibold">Secure account access</p>
+              <p className="mt-1 text-xs text-primary-foreground/70">Sign in to keep your workspace private and available.</p>
             </div>
           </div>
         </section>
@@ -95,12 +95,12 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
             <div>
               <Badge variant="secondary">LecKeep</Badge>
               <h2 className="mt-4 text-3xl font-extrabold tracking-tight">
-                {isLogin ? "Welcome back" : "Create account"}
+                {isLogin ? "Sign in to your account" : "Create your account"}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 {isLogin
-                  ? "Login to manage lecture document folders."
-                  : "Sign up to start your lecture document library."}
+                  ? "Access your notes, documents, subjects, and shared folders."
+                  : "Set up a secure workspace for your notes and study documents."}
               </p>
             </div>
           </div>
@@ -120,7 +120,7 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <Input
                     type="text"
                     name="username"
-                    placeholder="Enter username"
+                    placeholder="Enter your username"
                     value={formData.username}
                     onChange={handleChange}
                     required
@@ -136,7 +136,7 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <Input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    placeholder="Enter password"
+                    placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -159,7 +159,7 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
                   <Input
                     type={showPassword ? "text" : "password"}
                     name="confirmPassword"
-                    placeholder="Repeat password"
+                    placeholder="Repeat your password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
@@ -170,11 +170,11 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               <Button type="submit" disabled={isLoading} className="w-full" size="lg">
                 {isLoading
                   ? isLogin
-                    ? "Logging in..."
-                    : "Signing up..."
+                    ? "Signing in..."
+                    : "Creating account..."
                   : isLogin
-                  ? "Login"
-                  : "Sign up"}
+                  ? "Sign in"
+                  : "Create account"}
               </Button>
             </form>
           </Card>
@@ -190,7 +190,7 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               }}
               className="font-semibold text-primary hover:underline"
             >
-              {isLogin ? "Create one" : "Login"}
+              {isLogin ? "Create one" : "Sign in"}
             </button>
           </p>
         </section>

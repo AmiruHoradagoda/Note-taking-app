@@ -29,7 +29,7 @@ const NavBar = ({ onSearch }) => {
     onSearch?.(getUserId(), query);
   };
 
-  const username = user?.username || "John Doe";
+  const username = user?.username || "CE Student";
   const initials = username.slice(0, 2).toUpperCase();
 
   return (
@@ -40,7 +40,7 @@ const NavBar = ({ onSearch }) => {
           <Input
             value={searchQuery}
             onChange={handleSearch}
-            placeholder="Search notes..."
+            placeholder="Search architecture, Verilog, networks..."
             className="h-12 rounded-lg border-0 bg-[#eef6fb] pl-12 shadow-none"
           />
         </div>
