@@ -1,29 +1,25 @@
 package com.devProject.leckeep_backend.service.document;
 
+import com.devProject.leckeep_backend.enums.DocumentType;
+import com.devProject.leckeep_backend.enums.PreviewMode;
+import com.devProject.leckeep_backend.service.document.type.FileTypeHandler;
+import com.devProject.leckeep_backend.service.document.type.FileTypeHandlerResolver;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Locale;
-import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class FileValidationService {
     private static final long MAX_FILE_SIZE_BYTES = 25L * 1024L * 1024L;
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-            "pdf",
-            "png",
-            "jpg",
-            "jpeg",
-            "doc",
-            "docx",
-            "ppt",
-            "pptx",
-            "xls",
-            "xlsx"
-    );
+    private final FileTypeHandlerResolver fileTypeHandlerResolver;
 
-    public void validate(MultipartFile file) {
+    public FileValidationResult validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File is required");
         }
@@ -32,9 +28,15 @@ public class FileValidationService {
         }
 
         String extension = getExtension(file.getOriginalFilename());
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Unsupported file type: " + extension);
-        }
+        FileTypeHandler handler = fileTypeHandlerResolver.resolve(file.getContentType(), extension);
+        handler.validate(file, extension);
+
+        return FileValidationResult.builder()
+                .extension(extension)
+                .safeFilename(getSafeFilename(file.getOriginalFilename()))
+                .documentType(handler.getDocumentType(extension))
+                .previewMode(handler.getPreviewMode(extension))
+                .build();
     }
 
     public String getExtension(String originalFilename) {
@@ -49,5 +51,14 @@ public class FileValidationService {
     public String getSafeFilename(String originalFilename) {
         String filename = StringUtils.cleanPath(originalFilename == null ? "file" : originalFilename);
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    @Getter
+    @Builder
+    public static class FileValidationResult {
+        private final String extension;
+        private final String safeFilename;
+        private final DocumentType documentType;
+        private final PreviewMode previewMode;
     }
 }
