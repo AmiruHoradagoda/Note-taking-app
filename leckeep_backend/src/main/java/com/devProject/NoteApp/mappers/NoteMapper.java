@@ -1,17 +1,37 @@
-package com.devProject.NoteApp.utils.mappers;
+package com.devProject.NoteApp.mappers;
 
 import com.devProject.NoteApp.dto.requests.NoteRequestDto;
 import com.devProject.NoteApp.dto.response.NoteResponseDto;
 import com.devProject.NoteApp.model.Note;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface NoteMapper {
-    NoteResponseDto toNoteResponseDto(Note note);
+@Component
+public class NoteMapper {
+    public NoteResponseDto toNoteResponseDto(Note note) {
+        if (note == null) {
+            return null;
+        }
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    Note toNote(NoteRequestDto noteRequestDto);
+        return NoteResponseDto.builder()
+                .id(note.getId())
+                .userId(note.getUserId())
+                .title(note.getTitle())
+                .content(note.getContent())
+                .createdAt(note.getCreatedAt())
+                .tags(note.getTags())
+                .build();
+    }
+
+    public Note toNote(NoteRequestDto noteRequestDto) {
+        if (noteRequestDto == null) {
+            return null;
+        }
+
+        return Note.builder()
+                .userId(noteRequestDto.getUserId())
+                .title(noteRequestDto.getTitle())
+                .content(noteRequestDto.getContent())
+                .tags(noteRequestDto.getTags())
+                .build();
+    }
 }

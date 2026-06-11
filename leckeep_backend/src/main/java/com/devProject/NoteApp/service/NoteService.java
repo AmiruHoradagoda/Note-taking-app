@@ -3,10 +3,10 @@ package com.devProject.NoteApp.service;
 
 import com.devProject.NoteApp.dto.requests.NoteRequestDto;
 import com.devProject.NoteApp.dto.response.NoteResponseDto;
+import com.devProject.NoteApp.mappers.NoteMapper;
 import com.devProject.NoteApp.model.Note;
 import com.devProject.NoteApp.repository.NoteRepository;
 import com.devProject.NoteApp.utils.exception.NoteNotFoundException;
-import com.devProject.NoteApp.utils.mappers.NoteMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
