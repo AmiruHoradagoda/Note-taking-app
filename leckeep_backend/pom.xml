@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.devProject</groupId>
-    <artifactId>NoteApp</artifactId>
+    <artifactId>leckeep_backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>NoteApp</name>
+    <name>leckeep_backend</name>
     <description>Simple Note taking app</description>
     <url/>
     <licenses>
@@ -78,7 +78,13 @@
             <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
-
+        <!-- Source: https://mvnrepository.com/artifact/io.minio/minio -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.6.0</version>
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
