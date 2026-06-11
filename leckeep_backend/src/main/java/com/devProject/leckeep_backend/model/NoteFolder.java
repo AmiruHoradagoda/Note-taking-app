@@ -1,5 +1,6 @@
 package com.devProject.leckeep_backend.model;
 
+import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Document(collection = "note_folders")
+@Builder
 public class NoteFolder {
     @Id
     private String id;
