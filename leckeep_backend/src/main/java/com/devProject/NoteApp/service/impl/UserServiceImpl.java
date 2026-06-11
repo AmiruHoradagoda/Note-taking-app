@@ -1,13 +1,15 @@
-package com.devProject.NoteApp.service;
+package com.devProject.NoteApp.service.impl;
 
 import com.devProject.NoteApp.dto.requests.UserRequestDto;
 import com.devProject.NoteApp.dto.response.AuthenticationResponse;
 import com.devProject.NoteApp.dto.requests.RegisterRequest;
 import com.devProject.NoteApp.dto.response.UserResponseDto;
 import com.devProject.NoteApp.model.Users;
-import com.devProject.NoteApp.repository.UserRepo;
+import com.devProject.NoteApp.repository.UserRepository;
 import com.devProject.NoteApp.exception.UserNotFoundException;
 import com.devProject.NoteApp.mappers.UserMapper;
+import com.devProject.NoteApp.service.JWTService;
+import com.devProject.NoteApp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,16 +21,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class UserService {
+public class UserServiceImpl implements UserService {
 
     private final JWTService jwtService;
     private final AuthenticationManager authManager;
-    private final UserRepo repo;
+    private final UserRepository repo;
     private final UserMapper userMapper;
     private final PasswordEncoder encoder;
 
     @Autowired
-    public UserService(JWTService jwtService, AuthenticationManager authManager, UserRepo repo, UserMapper userMapper, PasswordEncoder encoder) {
+    public UserServiceImpl(JWTService jwtService, AuthenticationManager authManager, UserRepository repo, UserMapper userMapper, PasswordEncoder encoder) {
         this.jwtService = jwtService;
         this.authManager = authManager;
         this.repo = repo;
@@ -36,6 +38,7 @@ public class UserService {
         this.encoder = encoder;
     }
 
+    @Override
     public AuthenticationResponse register(RegisterRequest request) {
         validateNewUser(request.getUsername(), request.getPassword());
 
@@ -52,6 +55,7 @@ public class UserService {
                 .build();
     }
 
+    @Override
     public void initializeUser() {
         String username = "amiru@gmail.com";
 
@@ -66,6 +70,7 @@ public class UserService {
         repo.save(user);
     }
 
+    @Override
     public AuthenticationResponse verify(UserRequestDto user) {
         // Authenticate the user
         Authentication authentication = authManager.authenticate(
@@ -100,18 +105,21 @@ public class UserService {
     }
 
 
+    @Override
     public List<UserResponseDto> getAllUsers() {
         return repo.findAll().stream()
                 .map(userMapper::toUserResponseDto)
                 .collect(Collectors.toList());
     }
 
+    @Override
     public UserResponseDto getUserById(String id) {
         return repo.findById(id)
                 .map(userMapper::toUserResponseDto)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
     }
 
+    @Override
     public UserResponseDto createUser(Users user) {
         validateNewUser(user.getUsername(), user.getPassword());
         user.setPassword(encoder.encode(user.getPassword()));
@@ -119,6 +127,7 @@ public class UserService {
         return userMapper.toUserResponseDto(savedUser);
     }
 
+    @Override
     public UserResponseDto updateUser(String id, Users user) {
         Users existingUser = repo.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
@@ -139,6 +148,7 @@ public class UserService {
         return userMapper.toUserResponseDto(updatedUser);
     }
 
+    @Override
     public void deleteUser(String id) {
         if (!repo.existsById(id)) {
             throw new UserNotFoundException("User not found with id: " + id);

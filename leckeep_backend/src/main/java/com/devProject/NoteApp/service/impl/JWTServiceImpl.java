@@ -1,5 +1,6 @@
-package com.devProject.NoteApp.service;
+package com.devProject.NoteApp.service.impl;
 
+import com.devProject.NoteApp.service.JWTService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -17,12 +18,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
-public class JWTService {
-    private static final Logger logger = LoggerFactory.getLogger(JWTService.class);
+public class JWTServiceImpl implements JWTService {
+    private static final Logger logger = LoggerFactory.getLogger(JWTServiceImpl.class);
 
     @Value("${jwt.secret}")
     private String SECRET_KEY;
 
+    @Override
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
         
@@ -48,6 +50,7 @@ public class JWTService {
         }
     }
 
+    @Override
     public String extractUserName(String token) {
         try {
             return extractClaim(token, Claims::getSubject);
@@ -75,6 +78,7 @@ public class JWTService {
         }
     }
 
+    @Override
     public boolean validateToken(String token, UserDetails userDetails) {
         try {
             final String userName = extractUserName(token);
