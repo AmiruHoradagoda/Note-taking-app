@@ -7,16 +7,14 @@ import com.devProject.NoteApp.enums.FolderVisibility;
 import com.devProject.NoteApp.exception.FolderNotFoundException;
 import com.devProject.NoteApp.mappers.NoteFolderMapper;
 import com.devProject.NoteApp.model.NoteFolder;
-import com.devProject.NoteApp.model.UserPrincipal;
+import com.devProject.NoteApp.service.CurrentUserService;
 import com.devProject.NoteApp.repository.NoteFolderRepository;
 import com.devProject.NoteApp.service.FolderService;
+import com.devProject.NoteApp.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,26 +26,32 @@ public class FolderServiceImpl implements FolderService {
 
     private final NoteFolderRepository noteFolderRepository;
     private final NoteFolderMapper noteFolderMapper;
+    private final CurrentUserService currentUserService;
 
     @Override
     public NoteFolderPaginateResponseDto getFolders(String scope, int page, int size) {
-        Pageable pageable = buildPageable(page, size);
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                MAX_PAGE_SIZE,
+                Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt")
+        );
         String normalizedScope = normalizeScope(scope);
 
         Page<NoteFolder> folderPage = switch (normalizedScope) {
             case "private" -> noteFolderRepository.findByOwnerIdAndVisibility(
-                    requireCurrentUserId(),
+                    currentUserService.requireCurrentUserId(),
                     FolderVisibility.PRIVATE,
                     pageable
             );
             case "global" -> noteFolderRepository.findByVisibility(FolderVisibility.GLOBAL, pageable);
             case "group" -> noteFolderRepository.findByVisibility(FolderVisibility.GROUP, pageable);
             case "shared" -> noteFolderRepository.findByOwnerIdAndVisibilityIn(
-                    requireCurrentUserId(),
+                    currentUserService.requireCurrentUserId(),
                     List.of(FolderVisibility.GLOBAL, FolderVisibility.GROUP),
                     pageable
             );
-            default -> noteFolderRepository.findByOwnerId(requireCurrentUserId(), pageable);
+            default -> noteFolderRepository.findByOwnerId(currentUserService.requireCurrentUserId(), pageable);
         };
 
         List<NoteFolderResponseDto> folders = folderPage.getContent()
@@ -72,7 +76,7 @@ public class FolderServiceImpl implements FolderService {
     public NoteFolderResponseDto createFolder(NoteFolderRequestDto request) {
         validateFolderRequest(request);
 
-        NoteFolder noteFolder = noteFolderMapper.toNoteFolder(request, requireCurrentUserId());
+        NoteFolder noteFolder = noteFolderMapper.toNoteFolder(request, currentUserService.requireCurrentUserId());
         NoteFolder savedFolder = noteFolderRepository.save(noteFolder);
         return noteFolderMapper.toNoteFolderResponseDto(savedFolder);
     }
@@ -96,29 +100,11 @@ public class FolderServiceImpl implements FolderService {
         noteFolderRepository.delete(noteFolder);
     }
 
-    private Pageable buildPageable(int page, int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        Sort sort = Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt");
-        return PageRequest.of(safePage, safeSize, sort);
-    }
-
     private String normalizeScope(String scope) {
         if (scope == null || scope.isBlank()) {
             return "private";
         }
         return scope.trim().toLowerCase();
-    }
-
-    private String requireCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Object principal = authentication != null ? authentication.getPrincipal() : null;
-
-        if (principal instanceof UserPrincipal userPrincipal) {
-            return userPrincipal.getUserId();
-        }
-
-        throw new IllegalStateException("Authenticated user is required");
     }
 
     private NoteFolder findFolderOrThrow(String id) {
@@ -146,7 +132,7 @@ public class FolderServiceImpl implements FolderService {
     }
 
     private void requireFolderOwner(NoteFolder noteFolder) {
-        String currentUserId = requireCurrentUserId();
+        String currentUserId = currentUserService.requireCurrentUserId();
         if (!currentUserId.equals(noteFolder.getOwnerId())) {
             throw new SecurityException("You do not have access to this folder");
         }
