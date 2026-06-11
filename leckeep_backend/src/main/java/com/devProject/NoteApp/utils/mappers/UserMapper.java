@@ -11,5 +11,7 @@ public interface UserMapper {
     UserResponseDto toUserResponseDto(Users users);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     Users toRegisterRequest(RegisterRequest request);
 }
