@@ -1,5 +1,6 @@
 package com.devProject.leckeep_backend.service.document;
 
+import com.devProject.leckeep_backend.dto.response.DocumentDownloadResponseDto;
 import com.devProject.leckeep_backend.dto.response.DocumentFileResponseDto;
 import com.devProject.leckeep_backend.dto.response.DocumentPreviewResponseDto;
 import com.devProject.leckeep_backend.dto.response.pagination.DocumentFilePaginateResponseDto;
@@ -10,7 +11,7 @@ public interface DocumentService {
 
     DocumentFilePaginateResponseDto getFolderDocuments(String folderId, int page, int size);
 
-    String downloadDocument(String documentId);
+    DocumentDownloadResponseDto downloadDocument(String documentId);
 
     DocumentPreviewResponseDto previewDocument(String documentId);
 

@@ -1,5 +1,6 @@
 package com.devProject.leckeep_backend.service.document;
 
+import com.devProject.leckeep_backend.dto.response.DocumentDownloadResponseDto;
 import com.devProject.leckeep_backend.dto.response.DocumentFileResponseDto;
 import com.devProject.leckeep_backend.dto.response.DocumentPreviewResponseDto;
 import com.devProject.leckeep_backend.dto.response.pagination.DocumentFilePaginateResponseDto;
@@ -11,6 +12,7 @@ import com.devProject.leckeep_backend.model.NoteFolder;
 import com.devProject.leckeep_backend.repository.DocumentFileRepository;
 import com.devProject.leckeep_backend.repository.NoteFolderRepository;
 import com.devProject.leckeep_backend.service.auth.CurrentUserService;
+import com.devProject.leckeep_backend.service.document.storage.DownloadedObject;
 import com.devProject.leckeep_backend.service.document.storage.FileUploadCommand;
 import com.devProject.leckeep_backend.service.document.storage.ObjectStorageService;
 import com.devProject.leckeep_backend.service.document.storage.StoredObject;
@@ -18,6 +20,7 @@ import com.devProject.leckeep_backend.service.document.type.FileTypeHandler;
 import com.devProject.leckeep_backend.service.document.type.FileTypeHandlerResolver;
 import com.devProject.leckeep_backend.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -105,14 +108,25 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public String downloadDocument(String documentId) {
-        return "GET document download " + documentId;
+    public DocumentDownloadResponseDto downloadDocument(String documentId) {
+        DocumentFile documentFile = findDocumentOrThrow(documentId);
+        NoteFolder folder = noteFolderRepository.findById(documentFile.getFolderId())
+                .orElseThrow(() -> new FolderNotFoundException("Folder not found with id: " + documentFile.getFolderId()));
+        requireFolderReadAccess(folder);
+
+        DownloadedObject downloadedObject = objectStorageService.download(documentFile.getStoredKey());
+        return DocumentDownloadResponseDto.builder()
+                .documentId(documentFile.getId())
+                .originalName(documentFile.getOriginalName())
+                .contentType(resolveContentType(downloadedObject.getContentType(), documentFile.getContentType()))
+                .sizeBytes(resolveSizeBytes(downloadedObject.getSizeBytes(), documentFile.getSizeBytes()))
+                .inputStream(downloadedObject.getInputStream())
+                .build();
     }
 
     @Override
     public DocumentPreviewResponseDto previewDocument(String documentId) {
-        DocumentFile documentFile = documentFileRepository.findById(documentId)
-                .orElseThrow(() -> new IllegalArgumentException("Document not found with id: " + documentId));
+        DocumentFile documentFile = findDocumentOrThrow(documentId);
         NoteFolder folder = noteFolderRepository.findById(documentFile.getFolderId())
                 .orElseThrow(() -> new FolderNotFoundException("Folder not found with id: " + documentFile.getFolderId()));
         requireFolderReadAccess(folder);
@@ -141,6 +155,25 @@ public class DocumentServiceImpl implements DocumentService {
 
     private String buildObjectKey(String folderId, String safeFilename) {
         return "folders/%s/%s-%s".formatted(folderId, UUID.randomUUID(), safeFilename);
+    }
+
+    private DocumentFile findDocumentOrThrow(String documentId) {
+        return documentFileRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found with id: " + documentId));
+    }
+
+    private String resolveContentType(String storageContentType, String metadataContentType) {
+        if (storageContentType != null && !storageContentType.isBlank()) {
+            return storageContentType;
+        }
+        if (metadataContentType != null && !metadataContentType.isBlank()) {
+            return metadataContentType;
+        }
+        return MediaType.APPLICATION_OCTET_STREAM_VALUE;
+    }
+
+    private long resolveSizeBytes(long storageSizeBytes, long metadataSizeBytes) {
+        return storageSizeBytes > 0 ? storageSizeBytes : metadataSizeBytes;
     }
 
     private boolean isInlinePreview(PreviewMode previewMode) {

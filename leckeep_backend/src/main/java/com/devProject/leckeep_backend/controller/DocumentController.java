@@ -1,5 +1,9 @@
 package com.devProject.leckeep_backend.controller;
 
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,8 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 
+import com.devProject.leckeep_backend.dto.response.DocumentDownloadResponseDto;
 import com.devProject.leckeep_backend.service.document.DocumentService;
 import com.devProject.leckeep_backend.utils.StandardResponseDto;
+
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -40,8 +47,20 @@ public class DocumentController {
     }
 
     @GetMapping("/documents/{documentId}/download")
-    public StandardResponseDto downloadDocument(@PathVariable String documentId) {
-        return new StandardResponseDto(200, "Document download action completed", documentService.downloadDocument(documentId));
+    public ResponseEntity<InputStreamResource> downloadDocument(@PathVariable String documentId) {
+        DocumentDownloadResponseDto download = documentService.downloadDocument(documentId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(download.getContentType()))
+                .contentLength(download.getSizeBytes())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(download.getOriginalName(), StandardCharsets.UTF_8)
+                                .build()
+                                .toString()
+                )
+                .body(new InputStreamResource(download.getInputStream()));
     }
 
     @GetMapping("/documents/{documentId}/preview")
