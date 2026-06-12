@@ -70,6 +70,7 @@ public class DocumentController {
 
     @DeleteMapping("/documents/{documentId}")
     public StandardResponseDto deleteDocument(@PathVariable String documentId) {
-        return new StandardResponseDto(200, "Document deleted", documentService.deleteDocument(documentId));
+        documentService.deleteDocument(documentId);
+        return new StandardResponseDto(200, "Document deleted", null);
     }
 }

@@ -15,5 +15,5 @@ public interface DocumentService {
 
     DocumentPreviewResponseDto previewDocument(String documentId);
 
-    String deleteDocument(String documentId);
+    void deleteDocument(String documentId);
 }

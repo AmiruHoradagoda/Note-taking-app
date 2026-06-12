@@ -7,6 +7,7 @@ import com.devProject.leckeep_backend.dto.response.pagination.DocumentFilePagina
 import com.devProject.leckeep_backend.enums.FolderVisibility;
 import com.devProject.leckeep_backend.enums.PreviewMode;
 import com.devProject.leckeep_backend.exception.FolderNotFoundException;
+import com.devProject.leckeep_backend.mappers.DocumentFileMapper;
 import com.devProject.leckeep_backend.model.DocumentFile;
 import com.devProject.leckeep_backend.model.NoteFolder;
 import com.devProject.leckeep_backend.repository.DocumentFileRepository;
@@ -50,6 +51,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final FileValidationService fileValidationService;
     private final ObjectStorageService objectStorageService;
     private final FileTypeHandlerResolver fileTypeHandlerResolver;
+    private final DocumentFileMapper documentFileMapper;
 
     @Override
     public DocumentFileResponseDto uploadDocument(String folderId, MultipartFile file) {
@@ -57,10 +59,7 @@ public class DocumentServiceImpl implements DocumentService {
         String currentUserId = currentUserService.requireCurrentUserId();
         NoteFolder folder = noteFolderRepository.findById(folderId)
                 .orElseThrow(() -> new FolderNotFoundException("Folder not found with id: " + folderId));
-
-        if (!currentUserId.equals(folder.getOwnerId())) {
-            throw new SecurityException("You do not have access to upload documents to this folder");
-        }
+        requireFolderOwner(folder, currentUserId, "You do not have access to upload documents to this folder");
 
         String objectKey = buildObjectKey(folderId, validationResult.getSafeFilename());
         String checksum = calculateSha256(file);
@@ -81,7 +80,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .build();
 
         DocumentFile savedDocument = documentFileRepository.save(documentFile);
-        return toDocumentFileResponse(savedDocument, validationResult);
+        return documentFileMapper.toDocumentFileResponseDto(savedDocument, validationResult);
     }
 
     @Override
@@ -101,7 +100,7 @@ public class DocumentServiceImpl implements DocumentService {
         return DocumentFilePaginateResponseDto.builder()
                 .dataList(documentPage.getContent()
                         .stream()
-                        .map(this::toDocumentFileResponse)
+                        .map(documentFileMapper::toDocumentFileResponseDto)
                         .toList())
                 .dataCount(documentPage.getTotalElements())
                 .build();
@@ -149,9 +148,17 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public String deleteDocument(String documentId) {
-        return "DELETE document " + documentId;
+    public void deleteDocument(String documentId) {
+        DocumentFile documentFile = findDocumentOrThrow(documentId);
+        NoteFolder folder = noteFolderRepository.findById(documentFile.getFolderId())
+                .orElseThrow(() -> new FolderNotFoundException("Folder not found with id: " + documentFile.getFolderId()));
+        requireFolderOwner(folder, currentUserService.requireCurrentUserId(), "You do not have access to delete this document");
+
+        objectStorageService.delete(documentFile.getStoredKey());
+        documentFileRepository.delete(documentFile);
     }
+
+//  *************Helper Methods*****************
 
     private String buildObjectKey(String folderId, String safeFilename) {
         return "folders/%s/%s-%s".formatted(folderId, UUID.randomUUID(), safeFilename);
@@ -183,9 +190,13 @@ public class DocumentServiceImpl implements DocumentService {
     private void requireFolderReadAccess(NoteFolder folder) {
         if (folder.getVisibility() == FolderVisibility.PRIVATE) {
             String currentUserId = currentUserService.requireCurrentUserId();
-            if (!currentUserId.equals(folder.getOwnerId())) {
-                throw new SecurityException("You do not have access to this document");
-            }
+            requireFolderOwner(folder, currentUserId, "You do not have access to this document");
+        }
+    }
+
+    private void requireFolderOwner(NoteFolder folder, String currentUserId, String message) {
+        if (!currentUserId.equals(folder.getOwnerId())) {
+            throw new SecurityException(message);
         }
     }
 
@@ -221,44 +232,4 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    private DocumentFileResponseDto toDocumentFileResponse(
-            DocumentFile documentFile,
-            FileValidationService.FileValidationResult validationResult
-    ) {
-        return DocumentFileResponseDto.builder()
-                .id(documentFile.getId())
-                .folderId(documentFile.getFolderId())
-                .ownerId(documentFile.getOwnerId())
-                .originalName(documentFile.getOriginalName())
-                .contentType(documentFile.getContentType())
-                .extension(documentFile.getExtension())
-                .sizeBytes(documentFile.getSizeBytes())
-                .checksum(documentFile.getChecksum())
-                .documentType(validationResult.getDocumentType())
-                .previewMode(validationResult.getPreviewMode())
-                .createdAt(documentFile.getCreatedAt())
-                .updatedAt(documentFile.getUpdatedAt())
-                .build();
-    }
-
-    private DocumentFileResponseDto toDocumentFileResponse(DocumentFile documentFile) {
-        FileTypeHandler fileTypeHandler = fileTypeHandlerResolver.resolve(
-                documentFile.getContentType(),
-                documentFile.getExtension()
-        );
-        return DocumentFileResponseDto.builder()
-                .id(documentFile.getId())
-                .folderId(documentFile.getFolderId())
-                .ownerId(documentFile.getOwnerId())
-                .originalName(documentFile.getOriginalName())
-                .contentType(documentFile.getContentType())
-                .extension(documentFile.getExtension())
-                .sizeBytes(documentFile.getSizeBytes())
-                .checksum(documentFile.getChecksum())
-                .documentType(fileTypeHandler.getDocumentType(documentFile.getExtension()))
-                .previewMode(fileTypeHandler.getPreviewMode(documentFile.getExtension()))
-                .createdAt(documentFile.getCreatedAt())
-                .updatedAt(documentFile.getUpdatedAt())
-                .build();
-    }
 }
