@@ -1,7 +1,9 @@
 package com.devProject.leckeep_backend.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -15,6 +17,8 @@ import java.time.LocalDateTime;
 @Document(collection = "group_members")
 @CompoundIndex(name = "group_member_unique", def = "{'groupId': 1, 'userId': 1}", unique = true)
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class GroupMember {
     @Id
     private String id;
@@ -22,6 +26,8 @@ public class GroupMember {
     private String groupId;
     @Indexed
     private String userId;
+    @Builder.Default
     private GroupRole role = GroupRole.MEMBER;
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }
