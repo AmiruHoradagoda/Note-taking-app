@@ -2,12 +2,13 @@ package com.devProject.leckeep_backend.service.document;
 
 import com.devProject.leckeep_backend.dto.response.DocumentFileResponseDto;
 import com.devProject.leckeep_backend.dto.response.DocumentPreviewResponseDto;
+import com.devProject.leckeep_backend.dto.response.pagination.DocumentFilePaginateResponseDto;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface DocumentService {
     DocumentFileResponseDto uploadDocument(String folderId, MultipartFile file);
 
-    String getFolderDocuments(String folderId);
+    DocumentFilePaginateResponseDto getFolderDocuments(String folderId, int page, int size);
 
     String downloadDocument(String documentId);
 

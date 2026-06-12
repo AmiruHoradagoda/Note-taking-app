@@ -31,8 +31,12 @@ public class DocumentController {
     }
 
     @GetMapping("/folders/{folderId}/documents")
-    public StandardResponseDto getFolderDocuments(@PathVariable String folderId) {
-        return new StandardResponseDto(200, "Folder documents fetched", documentService.getFolderDocuments(folderId));
+    public StandardResponseDto getFolderDocuments(
+            @PathVariable String folderId,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "10") int size
+    ) {
+        return new StandardResponseDto(200, "Folder documents fetched", documentService.getFolderDocuments(folderId, page, size));
     }
 
     @GetMapping("/documents/{documentId}/download")

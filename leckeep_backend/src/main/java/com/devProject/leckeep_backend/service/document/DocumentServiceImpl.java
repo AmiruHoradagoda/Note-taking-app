@@ -2,6 +2,7 @@ package com.devProject.leckeep_backend.service.document;
 
 import com.devProject.leckeep_backend.dto.response.DocumentFileResponseDto;
 import com.devProject.leckeep_backend.dto.response.DocumentPreviewResponseDto;
+import com.devProject.leckeep_backend.dto.response.pagination.DocumentFilePaginateResponseDto;
 import com.devProject.leckeep_backend.enums.FolderVisibility;
 import com.devProject.leckeep_backend.enums.PreviewMode;
 import com.devProject.leckeep_backend.exception.FolderNotFoundException;
@@ -15,7 +16,11 @@ import com.devProject.leckeep_backend.service.document.storage.ObjectStorageServ
 import com.devProject.leckeep_backend.service.document.storage.StoredObject;
 import com.devProject.leckeep_backend.service.document.type.FileTypeHandler;
 import com.devProject.leckeep_backend.service.document.type.FileTypeHandlerResolver;
+import com.devProject.leckeep_backend.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +39,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DocumentServiceImpl implements DocumentService {
     private static final int DIGEST_BUFFER_SIZE = 8192;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final DocumentFileRepository documentFileRepository;
     private final NoteFolderRepository noteFolderRepository;
@@ -72,12 +78,30 @@ public class DocumentServiceImpl implements DocumentService {
                 .build();
 
         DocumentFile savedDocument = documentFileRepository.save(documentFile);
-        return toResponse(savedDocument, validationResult);
+        return toDocumentFileResponse(savedDocument, validationResult);
     }
 
     @Override
-    public String getFolderDocuments(String folderId) {
-        return "GET documents for folder " + folderId;
+    public DocumentFilePaginateResponseDto getFolderDocuments(String folderId, int page, int size) {
+        NoteFolder folder = noteFolderRepository.findById(folderId)
+                .orElseThrow(() -> new FolderNotFoundException("Folder not found with id: " + folderId));
+        requireFolderReadAccess(folder);
+
+        Pageable pageable = PaginationUtils.buildPageable(
+                page,
+                size,
+                MAX_PAGE_SIZE,
+                Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt")
+        );
+        Page<DocumentFile> documentPage = documentFileRepository.findByFolderId(folderId, pageable);
+
+        return DocumentFilePaginateResponseDto.builder()
+                .dataList(documentPage.getContent()
+                        .stream()
+                        .map(this::toDocumentFileResponse)
+                        .toList())
+                .dataCount(documentPage.getTotalElements())
+                .build();
     }
 
     @Override
@@ -164,7 +188,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    private DocumentFileResponseDto toResponse(
+    private DocumentFileResponseDto toDocumentFileResponse(
             DocumentFile documentFile,
             FileValidationService.FileValidationResult validationResult
     ) {
@@ -179,6 +203,27 @@ public class DocumentServiceImpl implements DocumentService {
                 .checksum(documentFile.getChecksum())
                 .documentType(validationResult.getDocumentType())
                 .previewMode(validationResult.getPreviewMode())
+                .createdAt(documentFile.getCreatedAt())
+                .updatedAt(documentFile.getUpdatedAt())
+                .build();
+    }
+
+    private DocumentFileResponseDto toDocumentFileResponse(DocumentFile documentFile) {
+        FileTypeHandler fileTypeHandler = fileTypeHandlerResolver.resolve(
+                documentFile.getContentType(),
+                documentFile.getExtension()
+        );
+        return DocumentFileResponseDto.builder()
+                .id(documentFile.getId())
+                .folderId(documentFile.getFolderId())
+                .ownerId(documentFile.getOwnerId())
+                .originalName(documentFile.getOriginalName())
+                .contentType(documentFile.getContentType())
+                .extension(documentFile.getExtension())
+                .sizeBytes(documentFile.getSizeBytes())
+                .checksum(documentFile.getChecksum())
+                .documentType(fileTypeHandler.getDocumentType(documentFile.getExtension()))
+                .previewMode(fileTypeHandler.getPreviewMode(documentFile.getExtension()))
                 .createdAt(documentFile.getCreatedAt())
                 .updatedAt(documentFile.getUpdatedAt())
                 .build();
