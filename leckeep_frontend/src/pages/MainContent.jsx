@@ -65,6 +65,34 @@ const defaultGroups = [
   },
 ];
 
+const dummyUsers = [
+  {
+    id: "user-demo-1",
+    registrationNo: "IN0-20250702-002",
+    name: "P.S.P. Peiris Pitigalage Sarath Prasanna Peiris",
+  },
+  {
+    id: "user-demo-2",
+    registrationNo: "IN0-20250702-005",
+    name: "K.H. Hashan Madumadawa Koku Hannadige Hashan Madumadawa",
+  },
+  {
+    id: "user-demo-3",
+    registrationNo: "IN0-20250702-017",
+    name: "Ayesha Fernando",
+  },
+  {
+    id: "user-demo-4",
+    registrationNo: "IN0-20250702-024",
+    name: "Kavindu Silva",
+  },
+  {
+    id: "user-demo-5",
+    registrationNo: "IN0-20250702-041",
+    name: "Nimal Perera",
+  },
+];
+
 const demoSubjectCounts = {
   "Digital Logic Design": { notes: 4, documents: 5 },
   "Computer Architecture": { notes: 5, documents: 6 },
@@ -251,7 +279,8 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupMembers, setNewGroupMembers] = useState("");
+  const [groupRegistrationSearch, setGroupRegistrationSearch] = useState("");
+  const [selectedGroupUsers, setSelectedGroupUsers] = useState([]);
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [newNote, setNewNote] = useState({
     title: "",
@@ -449,6 +478,45 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     if (filters.subject === subject) setFilters((prev) => ({ ...prev, subject: "all" }));
   };
 
+  const groupUserOptions = useMemo(() => {
+    const query = groupRegistrationSearch.trim().toLowerCase();
+    if (!query) return [];
+
+    return dummyUsers
+      .filter((user) => !selectedGroupUsers.some((selectedUser) => selectedUser.id === user.id))
+      .filter((user) =>
+        user.registrationNo.toLowerCase().includes(query) ||
+        user.name.toLowerCase().includes(query)
+      )
+      .slice(0, 5);
+  }, [groupRegistrationSearch, selectedGroupUsers]);
+
+  const resetGroupForm = () => {
+    setNewGroupName("");
+    setGroupRegistrationSearch("");
+    setSelectedGroupUsers([]);
+    setShowGroupForm(false);
+  };
+
+  const addGroupUser = (user) => {
+    setSelectedGroupUsers((prev) =>
+      prev.some((selectedUser) => selectedUser.id === user.id) ? prev : [...prev, user]
+    );
+    setGroupRegistrationSearch("");
+  };
+
+  const removeGroupUser = (userId) => {
+    setSelectedGroupUsers((prev) => prev.filter((user) => user.id !== userId));
+  };
+
+  const userInitials = (name) =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("");
+
   const handleDocumentChange = (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
@@ -543,22 +611,16 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     event.preventDefault();
     if (!newGroupName.trim()) return;
 
-    const extraMembers = newGroupMembers
-      .split(",")
-      .map((member) => member.trim())
-      .filter(Boolean);
     const admin = currentAuthorName();
     const nextGroup = {
       id: `group-${Date.now()}`,
       name: newGroupName.trim(),
       admin,
-      members: uniqueValues([admin, ...extraMembers]),
+      members: uniqueValues([admin, ...selectedGroupUsers.map((user) => `${user.name} (${user.registrationNo})`)]),
     };
 
     saveGroups([nextGroup, ...groups]);
-    setNewGroupName("");
-    setNewGroupMembers("");
-    setShowGroupForm(false);
+    resetGroupForm();
     setError("");
   };
 
@@ -1241,49 +1303,113 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         title="Groups"
         description="Create study groups and see who joined each group"
         action={
-          <Button type="button" onClick={() => setShowGroupForm((prev) => !prev)}>
+          <Button type="button" onClick={() => setShowGroupForm(true)}>
             <UserPlus size={16} /> Create Group
           </Button>
         }
       />
 
       {showGroupForm && (
-        <Card className="mb-6 bg-card p-6 shadow-none">
-          <h2 className="mb-5 text-base font-extrabold">New Group</h2>
-          <form onSubmit={handleCreateGroup} className="grid gap-4 lg:grid-cols-[1fr_1.4fr_auto_auto] lg:items-end">
-            <label className="block space-y-2">
-              <span className="text-xs font-bold">Group Name *</span>
-              <Input
-                value={newGroupName}
-                onChange={(event) => setNewGroupName(event.target.value)}
-                placeholder="e.g., OOP Revision Group"
-                required
-                className="bg-white"
-              />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-xs font-bold">Members</span>
-              <Input
-                value={newGroupMembers}
-                onChange={(event) => setNewGroupMembers(event.target.value)}
-                placeholder="Add names separated by commas"
-                className="bg-white"
-              />
-            </label>
-            <Button type="submit">Create</Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setNewGroupName("");
-                setNewGroupMembers("");
-                setShowGroupForm(false);
-              }}
-            >
-              Cancel
-            </Button>
-          </form>
-        </Card>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4 py-8">
+          <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white p-6 shadow-soft">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold tracking-tight">Create Group</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Add members by registration number.</p>
+              </div>
+              <button
+                type="button"
+                onClick={resetGroupForm}
+                className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                aria-label="Close create group dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateGroup} className="space-y-5">
+              <label className="block space-y-2">
+                <span className="text-xs font-bold uppercase text-muted-foreground">Group Name *</span>
+                <Input
+                  value={newGroupName}
+                  onChange={(event) => setNewGroupName(event.target.value)}
+                  placeholder="e.g., OOP Revision Group"
+                  required
+                  className="bg-white"
+                  autoFocus
+                />
+              </label>
+
+              <div className="relative space-y-2">
+                <label className="block space-y-2">
+                  <span className="text-xs font-bold uppercase text-muted-foreground">Registration No</span>
+                  <Input
+                    value={groupRegistrationSearch}
+                    onChange={(event) => setGroupRegistrationSearch(event.target.value)}
+                    placeholder="Enter registration number"
+                    className="bg-white"
+                  />
+                </label>
+
+                {groupUserOptions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-lg border border-border bg-white shadow-soft">
+                    {groupUserOptions.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => addGroupUser(user)}
+                        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-extrabold text-primary">
+                          {userInitials(user.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-extrabold">{user.name}</p>
+                          <p className="text-xs font-semibold text-muted-foreground">{user.registrationNo}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 pt-1">
+                {selectedGroupUsers.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
+                    No members selected yet.
+                  </div>
+                ) : (
+                  selectedGroupUsers.map((user) => (
+                    <div key={user.id} className="flex items-center gap-3 rounded-lg border border-border bg-white p-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-extrabold text-primary">
+                        {userInitials(user.name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-extrabold">{user.name}</p>
+                        <p className="text-xs font-semibold text-muted-foreground">{user.registrationNo}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeGroupUser(user.id)}
+                        className="rounded-full p-2 text-muted-foreground hover:bg-muted"
+                        aria-label={`Remove ${user.name}`}
+                      >
+                        <X size={17} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="outline" onClick={resetGroupForm}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create Group</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
       )}
 
       <div className="grid gap-5 lg:grid-cols-2">
