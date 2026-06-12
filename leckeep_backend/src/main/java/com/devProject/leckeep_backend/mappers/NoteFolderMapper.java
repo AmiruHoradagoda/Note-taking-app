@@ -6,6 +6,7 @@ import com.devProject.leckeep_backend.dto.requests.NoteFolderRequestDto;
 import com.devProject.leckeep_backend.dto.response.NoteFolderResponseDto;
 import com.devProject.leckeep_backend.enums.FolderVisibility;
 import com.devProject.leckeep_backend.model.NoteFolder;
+import com.devProject.leckeep_backend.utils.SemesterUtils;
 
 import java.time.LocalDateTime;
 
@@ -41,7 +42,7 @@ public class NoteFolderMapper {
         noteFolder.setTitle(request.getTitle());
         noteFolder.setDescription(request.getDescription());
         noteFolder.setSubjectId(request.getSubjectId());
-        noteFolder.setSemester(request.getSemester());
+        noteFolder.setSemester(SemesterUtils.normalizeSemester(request.getSemester()));
         noteFolder.setCategory(request.getCategory());
         noteFolder.setVisibility(resolveVisibility(request.getVisibility()));
         noteFolder.setGroupId(resolveGroupId(request));
@@ -58,7 +59,7 @@ public class NoteFolderMapper {
         noteFolder.setTitle(request.getTitle());
         noteFolder.setDescription(request.getDescription());
         noteFolder.setSubjectId(request.getSubjectId());
-        noteFolder.setSemester(request.getSemester());
+        noteFolder.setSemester(SemesterUtils.normalizeSemester(request.getSemester()));
         noteFolder.setCategory(request.getCategory());
         noteFolder.setVisibility(resolveVisibility(request.getVisibility()));
         noteFolder.setGroupId(resolveGroupId(request));

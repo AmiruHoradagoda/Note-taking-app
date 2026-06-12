@@ -4,6 +4,9 @@ spring:
   profiles:
     active: dev
 
+server:
+  port: 8081
+
 jwt:
   secret: ${JWT_SECRET:VGhpcy1pcy1hLWRldi1vbmx5LWp3dC1zZWNyZXQtMzItYnl0ZXM=}
 

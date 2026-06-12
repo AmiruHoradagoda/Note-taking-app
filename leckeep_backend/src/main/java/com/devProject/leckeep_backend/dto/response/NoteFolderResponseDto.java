@@ -3,6 +3,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+import com.devProject.leckeep_backend.enums.FolderCategory;
 import com.devProject.leckeep_backend.enums.FolderVisibility;
 
 @Getter
@@ -17,7 +18,7 @@ public class NoteFolderResponseDto {
     private String description;
     private String subjectId;
     private String semester;
-    private String category;
+    private FolderCategory category;
     private FolderVisibility visibility;
     private String groupId;
     private LocalDateTime createdAt;

@@ -3,6 +3,7 @@ package com.devProject.leckeep_backend.mappers;
 import com.devProject.leckeep_backend.dto.requests.SubjectRequestDto;
 import com.devProject.leckeep_backend.dto.response.SubjectResponseDto;
 import com.devProject.leckeep_backend.model.Subject;
+import com.devProject.leckeep_backend.utils.SemesterUtils;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -50,9 +51,6 @@ public class SubjectMapper {
     }
 
     private String resolveSemester(String semester) {
-        if (semester == null || semester.isBlank()) {
-            return "Semester 1";
-        }
-        return semester.trim();
+        return SemesterUtils.normalizeSemester(semester);
     }
 }

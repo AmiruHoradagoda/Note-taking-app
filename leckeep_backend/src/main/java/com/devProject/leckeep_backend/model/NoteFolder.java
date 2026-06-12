@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.devProject.leckeep_backend.enums.FolderCategory;
 import com.devProject.leckeep_backend.enums.FolderVisibility;
 
 import java.time.LocalDateTime;
@@ -27,7 +28,7 @@ public class NoteFolder {
     @Indexed
     private String subjectId;
     private String semester;
-    private String category;
+    private FolderCategory category;
     @Indexed
     @Builder.Default
     private FolderVisibility visibility = FolderVisibility.PRIVATE;
