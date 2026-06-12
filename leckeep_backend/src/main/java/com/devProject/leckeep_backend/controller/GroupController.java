@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.devProject.leckeep_backend.dto.requests.GroupMemberRequestDto;
 import com.devProject.leckeep_backend.dto.requests.StudyGroupRequestDto;
+import com.devProject.leckeep_backend.dto.response.GroupMemberResponseDto;
 import com.devProject.leckeep_backend.dto.response.StudyGroupResponseDto;
 import com.devProject.leckeep_backend.dto.response.pagination.StudyGroupPaginateResponseDto;
 import com.devProject.leckeep_backend.service.group.GroupService;
@@ -59,12 +61,14 @@ public class GroupController {
     }
 
     @PostMapping("/{id}/members")
-    public StandardResponseDto addGroupMember(@PathVariable String id) {
-        return new StandardResponseDto(200, "Group member added", "POST member for group " + id);
+    public StandardResponseDto addGroupMember(@PathVariable String id, @RequestBody GroupMemberRequestDto request) {
+        GroupMemberResponseDto member = groupService.addGroupMember(id, request);
+        return new StandardResponseDto(200, "Group member added", member);
     }
 
     @DeleteMapping("/{id}/members/{userId}")
     public StandardResponseDto removeGroupMember(@PathVariable String id, @PathVariable String userId) {
-        return new StandardResponseDto(200, "Group member removed", "DELETE member " + userId + " from group " + id);
+        groupService.removeGroupMember(id, userId);
+        return new StandardResponseDto(200, "Group member removed", null);
     }
 }

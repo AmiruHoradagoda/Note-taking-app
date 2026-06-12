@@ -1,14 +1,20 @@
 package com.devProject.leckeep_backend.service.group;
 
+import com.devProject.leckeep_backend.dto.requests.GroupMemberRequestDto;
 import com.devProject.leckeep_backend.dto.requests.StudyGroupRequestDto;
+import com.devProject.leckeep_backend.dto.response.GroupMemberResponseDto;
 import com.devProject.leckeep_backend.dto.response.StudyGroupResponseDto;
 import com.devProject.leckeep_backend.dto.response.pagination.StudyGroupPaginateResponseDto;
 import com.devProject.leckeep_backend.enums.GroupRole;
+import com.devProject.leckeep_backend.exception.GroupNotFoundException;
+import com.devProject.leckeep_backend.exception.UserNotFoundException;
+import com.devProject.leckeep_backend.mappers.GroupMemberMapper;
 import com.devProject.leckeep_backend.mappers.StudyGroupMapper;
 import com.devProject.leckeep_backend.model.GroupMember;
 import com.devProject.leckeep_backend.model.StudyGroup;
 import com.devProject.leckeep_backend.repository.GroupMemberRepository;
 import com.devProject.leckeep_backend.repository.StudyGroupRepository;
+import com.devProject.leckeep_backend.repository.UserRepository;
 import com.devProject.leckeep_backend.service.auth.CurrentUserService;
 import com.devProject.leckeep_backend.utils.PaginationUtils;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +30,9 @@ public class GroupServiceImpl implements GroupService {
 
     private final StudyGroupRepository studyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final UserRepository userRepository;
     private final StudyGroupMapper studyGroupMapper;
+    private final GroupMemberMapper groupMemberMapper;
     private final CurrentUserService currentUserService;
 
     @Override
@@ -93,9 +101,51 @@ public class GroupServiceImpl implements GroupService {
         studyGroupRepository.delete(studyGroup);
     }
 
+    @Override
+    public GroupMemberResponseDto addGroupMember(String groupId, GroupMemberRequestDto request) {
+        validateGroupMemberRequest(request);
+        StudyGroup studyGroup = findGroupOrThrow(groupId);
+        requireGroupOwner(studyGroup);
+
+        String userId = request.getUserId().trim();
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException("User not found with id: " + userId);
+        }
+        if (groupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new IllegalArgumentException("User is already a member of this group");
+        }
+
+        GroupMember groupMember = GroupMember.builder()
+                .groupId(groupId)
+                .userId(userId)
+                .role(request.getRole() != null ? request.getRole() : GroupRole.MEMBER)
+                .build();
+
+        GroupMember savedGroupMember = groupMemberRepository.save(groupMember);
+        return groupMemberMapper.toGroupMemberResponseDto(savedGroupMember);
+    }
+
+    @Override
+    public void removeGroupMember(String groupId, String userId) {
+        StudyGroup studyGroup = findGroupOrThrow(groupId);
+        requireGroupOwner(studyGroup);
+
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User id is required");
+        }
+        if (studyGroup.getOwnerId().equals(userId)) {
+            throw new IllegalArgumentException("Group owner cannot be removed from the group");
+        }
+        if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {
+            throw new IllegalArgumentException("User is not a member of this group");
+        }
+
+        groupMemberRepository.deleteByGroupIdAndUserId(groupId, userId);
+    }
+
     private StudyGroup findGroupOrThrow(String id) {
         return studyGroupRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Group not found with id: " + id));
+                .orElseThrow(() -> new GroupNotFoundException("Group not found with id: " + id));
     }
 
     private void validateGroupRequest(StudyGroupRequestDto request) {
@@ -104,6 +154,15 @@ public class GroupServiceImpl implements GroupService {
         }
         if (request.getName() == null || request.getName().isBlank()) {
             throw new IllegalArgumentException("Group name is required");
+        }
+    }
+
+    private void validateGroupMemberRequest(GroupMemberRequestDto request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Group member request is required");
+        }
+        if (request.getUserId() == null || request.getUserId().isBlank()) {
+            throw new IllegalArgumentException("User id is required");
         }
     }
 

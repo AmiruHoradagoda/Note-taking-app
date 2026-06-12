@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.devProject.leckeep_backend.exception.FolderNotFoundException;
+import com.devProject.leckeep_backend.exception.GroupNotFoundException;
 import com.devProject.leckeep_backend.exception.UserNotFoundException;
 import com.devProject.leckeep_backend.utils.StandardResponseDto;
 
@@ -19,6 +20,15 @@ public class AppWideExceptionHandler {
                 HttpStatus.BAD_REQUEST
         );
     }
+
+    @ExceptionHandler(GroupNotFoundException.class)
+    public ResponseEntity<StandardResponseDto> handleGroupNotFoundException(GroupNotFoundException ex) {
+        return new ResponseEntity<StandardResponseDto>(
+                new StandardResponseDto(404, ex.getMessage(), ex),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<StandardResponseDto> handleDuplicateEntryException(UserNotFoundException ex) {
         return new ResponseEntity<StandardResponseDto>(
