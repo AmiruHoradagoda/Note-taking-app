@@ -24,8 +24,22 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
-import { categories, semesters, visibilityOptions } from "../../constants/academic";
-import { apiFetch, getUserId } from "../../lib/apiClient";
+import { categories, toFolderCategoryLabel } from "../../constants/folderCategories";
+import { semesters } from "../../constants/semesters";
+import { toVisibilityUiValue, visibilityOptions } from "../../constants/visibilityOptions";
+import { getUserId } from "../../lib/apiClient";
+import { getUsers } from "../users/users.api";
+import DashboardView from "../dashboard/DashboardView";
+import { addGroupMember, createGroup, getGroups } from "../groups/groups.api";
+import GroupsView from "../groups/GroupsView";
+import { createSubject, deleteSubject, getSubjects } from "../subjects/subjects.api";
+import SubjectsView from "../subjects/SubjectsView";
+import { createFolder, deleteFolder, getFolders, updateFolder } from "../folders/folders.api";
+import FoldersView from "../folders/FoldersView";
+import { getFolderDocuments, uploadDocument } from "../documents/documents.api";
+import AddNoteDialog from "../notes/AddNoteDialog";
+import NotesView from "../notes/NotesView";
+import { allowedDocumentExtensions, documentAccept } from "../notes/notes.constants";
 import {
   defaultGroups,
   defaultSubjects,
@@ -41,6 +55,11 @@ const noteScopes = [
   { id: "shared", label: "Shared", description: "Notes you shared", Icon: Share2 },
   { id: "group", label: "Group", description: "Notes shared inside groups", Icon: Users },
 ];
+const getDocumentName = (document) =>
+  typeof document === "string"
+    ? document
+    : document?.originalName || document?.name || "Document";
+
 const sanitizeNote = (note) => ({
   id: note?.id || `temp-${Date.now()}-${Math.random()}`,
   title: note?.title || "Untitled lecture note",
@@ -60,14 +79,32 @@ const sanitizeNotes = (noteList) =>
     ? noteList.map(sanitizeNote).filter((note) => !isHiddenPlaceholderNote(note))
     : [];
 
-const subjectStorageKey = () => `leckeeper-subjects-${getUserId() || "guest"}`;
-const noteMetaStorageKey = () => `leckeeper-note-meta-${getUserId() || "guest"}`;
-const groupStorageKey = () => `leckeeper-groups-${getUserId() || "guest"}`;
-
 const currentAuthorName = () => {
   const userId = getUserId();
   return userId ? `You (${userId.slice(-4)})` : "You";
 };
+
+const folderToNote = (folder, subjectRecords = [], documents = []) => {
+  const subject = subjectRecords.find((item) => item.id === folder.subjectId);
+  const documentNames = documents.map(getDocumentName);
+  const firstPdf = documents.find((document) => getFileExtension(document) === ".pdf");
+
+  return sanitizeNote({
+    id: folder.id,
+    title: folder.title,
+    content: folder.description || "",
+    createdAt: folder.createdAt,
+    userId: folder.ownerId,
+    tags: [subject?.name || "General"],
+    attachmentName: firstPdf ? getDocumentName(firstPdf) : documentNames[0] || "",
+  });
+};
+
+const groupToViewModel = (group) => ({
+  ...group,
+  admin: group.ownerId ? `Owner (${group.ownerId.slice(-4)})` : "Owner",
+  members: group.members || ["Owner"],
+});
 
 const normalizeSubject = (subject) => {
   if (typeof subject === "string") {
@@ -103,13 +140,10 @@ const formatDate = (value) => {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
-const displayFileName = (fileName) => fileName.replace(/\.[^/.]+$/, "");
+const displayFileName = (document) => getDocumentName(document).replace(/\.[^/.]+$/, "");
 
-const allowedDocumentExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
-const documentAccept = allowedDocumentExtensions.join(",");
-
-const getFileExtension = (fileName) => {
-  const match = fileName.toLowerCase().match(/\.[^/.]+$/);
+const getFileExtension = (document) => {
+  const match = getDocumentName(document).toLowerCase().match(/\.[^/.]+$/);
   return match ? match[0] : "";
 };
 
@@ -138,6 +172,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [notes, setNotes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [users, setUsers] = useState([]);
   const [noteMeta, setNoteMeta] = useState({});
   const [filters, setFilters] = useState({ semester: "all", subject: "all", category: "all" });
   const [subjectSemesterFilter, setSubjectSemesterFilter] = useState("all");
@@ -165,29 +200,70 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     groupId: "",
   });
 
-  const fetchNotes = useCallback(async () => {
+  const fetchWorkspace = useCallback(async () => {
     setLoading(true);
     try {
-      const userId = getUserId();
-      if (!userId) {
-        setError("User ID not found. Please log in again.");
-        return;
-      }
+      const [subjectList, groupPage, userList] = await Promise.all([
+        getSubjects(),
+        getGroups({ size: 100 }),
+        getUsers().catch(() => []),
+      ]);
 
-      const data = await apiFetch(`/notes/user/${userId}`);
-      const cleanNotes = sanitizeNotes(data);
-      const demoNotes = dummyNotes.map(sanitizeNote);
-      const mergedNotes = [
-        ...cleanNotes,
-        ...demoNotes.filter((demoNote) => !cleanNotes.some((note) => note.id === demoNote.id)),
-      ];
-      setNotes(mergedNotes);
-      setNoteMeta((prev) => ({ ...dummyNoteMeta, ...prev }));
+      const cleanSubjects = uniqueSubjects(subjectList);
+      const allGroups = (groupPage?.dataList || []).map(groupToViewModel);
+      const folderPages = await Promise.all(
+        ["private", "global", "group"].map((scope) => getFolders({ scope, size: 100 }))
+      );
+      const folders = folderPages.flatMap((page) => page?.dataList || []);
+      const folderDocuments = await Promise.all(
+        folders.map(async (folder) => {
+          try {
+            const documentsPage = await getFolderDocuments(folder.id, { size: 100 });
+            return [folder.id, documentsPage?.dataList || []];
+          } catch {
+            return [folder.id, []];
+          }
+        })
+      );
+      const documentsByFolderId = Object.fromEntries(folderDocuments);
+      const backendNotes = folders.map((folder) =>
+        folderToNote(folder, cleanSubjects, documentsByFolderId[folder.id] || [])
+      );
+      const backendMeta = Object.fromEntries(folders.map((folder) => {
+        const subject = cleanSubjects.find((item) => item.id === folder.subjectId);
+        const documents = documentsByFolderId[folder.id] || [];
+        return [
+          folder.id,
+          {
+            subject: subject?.name || "General",
+            subjectId: folder.subjectId,
+            semester: folder.semester || "Semester 1",
+            category: toFolderCategoryLabel(folder.category),
+            categoryValue: folder.category,
+            attachmentName: documents.map(getDocumentName).find((fileName) => getFileExtension(fileName) === ".pdf") || "",
+            documents,
+            visibility: toVisibilityUiValue(folder.visibility),
+            groupId: folder.groupId || "",
+            author: folder.ownerId === getUserId() ? currentAuthorName() : `User (${folder.ownerId?.slice(-4) || "unknown"})`,
+            sharedByMe: folder.ownerId === getUserId() && folder.visibility !== "PRIVATE",
+            sharedTo: folder.visibility === "GROUP" ? "group" : folder.visibility === "GLOBAL" ? "global" : "",
+          },
+        ];
+      }));
+
+      setSubjects(cleanSubjects);
+      setGroups(allGroups);
+      setUsers(userList.length > 0 ? userList : dummyUsers);
+      setNotes(backendNotes);
+      setNoteMeta(backendMeta);
       setError("");
     } catch (err) {
       console.error("Fetch error:", err);
+      setSubjects(uniqueSubjects(defaultSubjects));
+      setGroups(defaultGroups);
+      setUsers(dummyUsers);
       setNotes(dummyNotes.map(sanitizeNote));
-      setNoteMeta((prev) => ({ ...dummyNoteMeta, ...prev }));
+      setNoteMeta(dummyNoteMeta);
       setError("");
     } finally {
       setLoading(false);
@@ -195,22 +271,8 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   }, []);
 
   useEffect(() => {
-    const savedSubjects = JSON.parse(localStorage.getItem(subjectStorageKey()) || "[]");
-    const savedMeta = JSON.parse(localStorage.getItem(noteMetaStorageKey()) || "{}");
-    const savedGroups = JSON.parse(localStorage.getItem(groupStorageKey()) || "[]");
-    setSubjects(uniqueSubjects([...defaultSubjects, ...savedSubjects]));
-    setGroups([...defaultGroups, ...savedGroups.filter((group) => !defaultGroups.some((item) => item.id === group.id))]);
-    setNoteMeta(savedMeta);
-  }, []);
-
-  useEffect(() => {
-    if (searchResults) {
-      setNotes(sanitizeNotes(searchResults));
-      setLoading(false);
-    } else {
-      fetchNotes();
-    }
-  }, [fetchNotes, searchResults]);
+    fetchWorkspace();
+  }, [fetchWorkspace]);
 
   const noteSubjectNames = useMemo(
     () => uniqueValues(notes.flatMap((note) => note.tags || [])),
@@ -227,21 +289,8 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     [allSubjectRecords]
   );
 
-  const saveSubjects = (nextSubjects) => {
-    const cleaned = uniqueSubjects(nextSubjects);
-    setSubjects(cleaned);
-    localStorage.setItem(subjectStorageKey(), JSON.stringify(cleaned));
-  };
-
   const saveNoteMeta = (nextMeta) => {
     setNoteMeta(nextMeta);
-    localStorage.setItem(noteMetaStorageKey(), JSON.stringify(nextMeta));
-  };
-
-  const saveGroups = (nextGroups) => {
-    setGroups(nextGroups);
-    const customGroups = nextGroups.filter((group) => !defaultGroups.some((item) => item.id === group.id));
-    localStorage.setItem(groupStorageKey(), JSON.stringify(customGroups));
   };
 
   const subjectSemester = (subjectName) =>
@@ -258,8 +307,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     return {
       ...note,
       subject: meta.subject || subject,
+      subjectId: meta.subjectId || "",
       semester: meta.semester || subjectSemester(subject),
       category: meta.category || "Lecture",
+      categoryValue: meta.categoryValue || "",
       attachmentName: meta.attachmentName || note.attachmentName || documents.find((fileName) => getFileExtension(fileName) === ".pdf") || "",
       documents,
       visibility: meta.visibility || "private",
@@ -336,34 +387,51 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     return subjectRows.filter((subject) => subject.semester === subjectSemesterFilter);
   }, [subjectRows, subjectSemesterFilter]);
 
-  const handleAddSubject = (event) => {
+  const handleAddSubject = async (event) => {
     event.preventDefault();
     if (!newSubjectName.trim()) return;
 
-    saveSubjects([...subjects, { name: newSubjectName, semester: newSubjectSemester }]);
-    setNewSubjectName("");
-    setNewSubjectSemester("Semester 1");
-    setShowSubjectForm(false);
-    setError("");
+    try {
+      const subject = await createSubject({
+        name: newSubjectName.trim(),
+        semester: newSubjectSemester,
+      });
+      setSubjects((prev) => uniqueSubjects([...prev, subject]));
+      setNewSubjectName("");
+      setNewSubjectSemester("Semester 1");
+      setShowSubjectForm(false);
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to create subject");
+    }
   };
 
-  const handleRemoveSubject = (subject) => {
-    saveSubjects(subjects.filter((item) => item.name !== subject));
-    if (filters.subject === subject) setFilters((prev) => ({ ...prev, subject: "all" }));
+  const handleRemoveSubject = async (subjectName) => {
+    const subject = subjects.find((item) => item.name === subjectName);
+    if (!subject?.id) return;
+
+    try {
+      await deleteSubject(subject.id);
+      setSubjects((prev) => prev.filter((item) => item.id !== subject.id));
+      if (filters.subject === subjectName) setFilters((prev) => ({ ...prev, subject: "all" }));
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to delete subject");
+    }
   };
 
   const groupUserOptions = useMemo(() => {
     const query = groupRegistrationSearch.trim().toLowerCase();
     if (!query) return [];
 
-    return dummyUsers
+    return users
       .filter((user) => !selectedGroupUsers.some((selectedUser) => selectedUser.id === user.id))
       .filter((user) =>
-        user.registrationNo.toLowerCase().includes(query) ||
-        user.name.toLowerCase().includes(query)
+        (user.registrationNumber || user.registrationNo || "").toLowerCase().includes(query) ||
+        (user.username || user.name || "").toLowerCase().includes(query)
       )
       .slice(0, 5);
-  }, [groupRegistrationSearch, selectedGroupUsers]);
+  }, [groupRegistrationSearch, selectedGroupUsers, users]);
 
   const resetGroupForm = () => {
     setNewGroupName("");
@@ -384,7 +452,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   };
 
   const userInitials = (name) =>
-    name
+    (name || "")
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
@@ -401,7 +469,11 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       return;
     }
 
-    setSelectedDocuments((prev) => uniqueValues([...prev, ...files.map((file) => file.name)]));
+    setSelectedDocuments((prev) => {
+      const byName = new Map(prev.map((file) => [file.name, file]));
+      files.forEach((file) => byName.set(file.name, file));
+      return [...byName.values()];
+    });
     setError("");
   };
 
@@ -424,29 +496,41 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         return;
       }
 
-      const subject = newNote.subject.trim();
-      const data = await apiFetch("/notes", {
-        method: "POST",
-        body: {
-          title: newNote.title,
-          content: "",
-          userId,
-          tags: uniqueValues([subject]),
-        },
+      const subjectName = newNote.subject.trim();
+      let subject = subjects.find((item) => item.name === subjectName);
+      if (!subject?.id) {
+        subject = await createSubject({
+          name: subjectName,
+          semester: newNote.semester || "Semester 1",
+        });
+        setSubjects((prev) => uniqueSubjects([...prev, subject]));
+      }
+
+      const folder = await createFolder({
+        title: newNote.title,
+        description: "",
+        subjectId: subject.id,
+        semester: newNote.semester || subject.semester || "Semester 1",
+        category: newNote.category || "Lecture",
+        visibility: newNote.visibility || "private",
+        groupId: newNote.visibility === "group" ? newNote.groupId : "",
       });
 
-      if (subject) saveSubjects([...subjects, { name: subject, semester: newNote.semester || "Semester 1" }]);
-      const firstPdf = selectedDocuments.find((fileName) => getFileExtension(fileName) === ".pdf") || "";
-      const cleanNote = sanitizeNote({ ...data, content: "", attachmentName: firstPdf });
+      const uploadedDocuments = await Promise.all(
+        selectedDocuments.map((file) => uploadDocument(folder.id, file))
+      );
+      const cleanNote = folderToNote(folder, [...subjects, subject], uploadedDocuments);
       setNotes((prev) => [cleanNote, ...prev]);
       saveNoteMeta({
         ...noteMeta,
         [cleanNote.id]: {
-          subject,
-          semester: newNote.semester || "Semester 1",
+          subject: subject.name,
+          subjectId: subject.id,
+          semester: folder.semester || newNote.semester || "Semester 1",
           category: newNote.category || "Lecture",
-          attachmentName: firstPdf,
-          documents: selectedDocuments,
+          categoryValue: folder.category,
+          attachmentName: uploadedDocuments.map(getDocumentName).find((fileName) => getFileExtension(fileName) === ".pdf") || "",
+          documents: uploadedDocuments,
           visibility: newNote.visibility || "private",
           groupId: newNote.visibility === "group" ? newNote.groupId : "",
           author: currentAuthorName(),
@@ -466,36 +550,50 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
   const handleNoteUpdate = (updatedNote) => {
     const cleanNote = sanitizeNote(updatedNote);
-    saveSubjects([
-      ...subjects,
-      ...(cleanNote.tags || []).map((name) => ({ name, semester: subjectSemester(name) })),
-    ]);
     setNotes((prev) => prev.map((note) => (note.id === cleanNote.id ? cleanNote : note)));
   };
 
-  const handleNoteDelete = (noteId) => {
-    setNotes((prev) => prev.filter((note) => note.id !== noteId));
-    if (selectedNote?.id === noteId) setSelectedNote(null);
-    const nextMeta = { ...noteMeta };
-    delete nextMeta[noteId];
-    saveNoteMeta(nextMeta);
+  const handleNoteDelete = async (noteId) => {
+    try {
+      await deleteFolder(noteId);
+      setNotes((prev) => prev.filter((note) => note.id !== noteId));
+      if (selectedNote?.id === noteId) setSelectedNote(null);
+      const nextMeta = { ...noteMeta };
+      delete nextMeta[noteId];
+      saveNoteMeta(nextMeta);
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to delete folder");
+    }
   };
 
-  const handleCreateGroup = (event) => {
+  const handleCreateGroup = async (event) => {
     event.preventDefault();
     if (!newGroupName.trim()) return;
 
-    const admin = currentAuthorName();
-    const nextGroup = {
-      id: `group-${Date.now()}`,
-      name: newGroupName.trim(),
-      admin,
-      members: uniqueValues([admin, ...selectedGroupUsers.map((user) => `${user.name} (${user.registrationNo})`)]),
-    };
-
-    saveGroups([nextGroup, ...groups]);
-    resetGroupForm();
-    setError("");
+    try {
+      const group = await createGroup({ name: newGroupName.trim() });
+      await Promise.all(
+        selectedGroupUsers.map((user) =>
+          addGroupMember(group.id, { userId: user.id, role: "MEMBER" })
+        )
+      );
+      const admin = currentAuthorName();
+      const nextGroup = groupToViewModel({
+        ...group,
+        members: uniqueValues([
+          admin,
+          ...selectedGroupUsers.map((user) =>
+            `${user.username || user.name} (${user.registrationNumber || user.registrationNo})`
+          ),
+        ]),
+      });
+      setGroups((prev) => [nextGroup, ...prev]);
+      resetGroupForm();
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to create group");
+    }
   };
 
   const openShareDialog = (note) => {
@@ -504,33 +602,50 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     setShareGroupId(groups[0]?.id || "");
   };
 
-  const handleShareNote = () => {
+  const handleShareNote = async () => {
     if (!shareNote) return;
     if (shareTarget === "group" && !shareGroupId) {
       setError("Please select a group to share this note.");
       return;
     }
 
-    saveNoteMeta({
-      ...noteMeta,
-      [shareNote.id]: {
-        ...(noteMeta[shareNote.id] || {}),
-        subject: shareNote.subject,
+    try {
+      const nextVisibility = shareTarget === "global" ? "global" : "group";
+      const updatedFolder = await updateFolder(shareNote.id, {
+        title: shareNote.title,
+        description: shareNote.content || "",
+        subjectId: shareNote.subjectId,
         semester: shareNote.semester,
         category: shareNote.category,
+        visibility: nextVisibility,
+        groupId: nextVisibility === "group" ? shareGroupId : "",
+      });
+
+      saveNoteMeta({
+        ...noteMeta,
+        [shareNote.id]: {
+        ...(noteMeta[shareNote.id] || {}),
+        subject: shareNote.subject,
+        subjectId: shareNote.subjectId,
+        semester: updatedFolder.semester || shareNote.semester,
+        category: toFolderCategoryLabel(updatedFolder.category),
+        categoryValue: updatedFolder.category,
         attachmentName: shareNote.attachmentName,
         documents: shareNote.documents,
-        visibility: shareTarget === "global" ? "global" : "group",
-        groupId: shareTarget === "group" ? shareGroupId : "",
+        visibility: nextVisibility,
+        groupId: nextVisibility === "group" ? shareGroupId : "",
         author: shareNote.author || currentAuthorName(),
         sharedByMe: true,
         sharedTo: shareTarget,
-      },
-    });
-    setActiveNoteScope("shared");
-    setSelectedNote(null);
-    setShareNote(null);
-    setError("");
+        },
+      });
+      setActiveNoteScope("shared");
+      setSelectedNote(null);
+      setShareNote(null);
+      setError("");
+    } catch (err) {
+      setError(err.message || "Failed to share folder");
+    }
   };
 
   const PageHeader = ({ title, description, action }) => (
@@ -683,17 +798,17 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
 
               {selectedDocuments.length > 0 && (
                 <div className="space-y-2 rounded-lg border border-border bg-white p-3">
-                  {selectedDocuments.map((fileName) => (
-                    <div key={fileName} className="flex items-center justify-between gap-3 rounded-lg bg-muted p-3">
+                  {selectedDocuments.map((file) => (
+                    <div key={getDocumentName(file)} className="flex items-center justify-between gap-3 rounded-lg bg-muted p-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        {getDocumentIcon(fileName, 20)}
-                        <p className="truncate text-sm font-bold">{displayFileName(fileName)}</p>
+                        {getDocumentIcon(file, 20)}
+                        <p className="truncate text-sm font-bold">{displayFileName(file)}</p>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => setSelectedDocuments((prev) => prev.filter((item) => item !== fileName))}
+                        onClick={() => setSelectedDocuments((prev) => prev.filter((item) => getDocumentName(item) !== getDocumentName(file)))}
                       >
                         <X size={15} />
                       </Button>
@@ -745,10 +860,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                 </div>
               )}
               {selectedDocuments.length > 0 ? (
-                selectedDocuments.map((fileName) => (
-                  <div key={fileName} className="flex items-center gap-3 rounded-lg bg-muted p-3">
-                    {getDocumentIcon(fileName, 18)}
-                    <span className="truncate font-semibold">{displayFileName(fileName)}</span>
+                selectedDocuments.map((file) => (
+                  <div key={getDocumentName(file)} className="flex items-center gap-3 rounded-lg bg-muted p-3">
+                    {getDocumentIcon(file, 18)}
+                    <span className="truncate font-semibold">{displayFileName(file)}</span>
                   </div>
                 ))
               ) : (
@@ -1056,9 +1171,9 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
               </div>
               {resources.documents.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                  {resources.documents.map((fileName) => renderResourceTile({
-                    icon: getDocumentIcon(fileName, 42),
-                    title: displayFileName(fileName),
+                  {resources.documents.map((document) => renderResourceTile({
+                    icon: getDocumentIcon(document, 42),
+                    title: displayFileName(document),
                     date: formatDate(note.createdAt),
                   }))}
                 </div>
@@ -1235,11 +1350,11 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                         className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted"
                       >
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-extrabold text-primary">
-                          {userInitials(user.name)}
+                          {userInitials(user.username || user.name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-extrabold">{user.name}</p>
-                          <p className="text-xs font-semibold text-muted-foreground">{user.registrationNo}</p>
+                          <p className="truncate text-sm font-extrabold">{user.username || user.name}</p>
+                          <p className="text-xs font-semibold text-muted-foreground">{user.registrationNumber || user.registrationNo}</p>
                         </div>
                       </button>
                     ))}
@@ -1256,17 +1371,17 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                   selectedGroupUsers.map((user) => (
                     <div key={user.id} className="flex items-center gap-3 rounded-lg border border-border bg-white p-3">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-extrabold text-primary">
-                        {userInitials(user.name)}
+                        {userInitials(user.username || user.name)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-extrabold">{user.name}</p>
-                        <p className="text-xs font-semibold text-muted-foreground">{user.registrationNo}</p>
+                        <p className="truncate text-sm font-extrabold">{user.username || user.name}</p>
+                        <p className="text-xs font-semibold text-muted-foreground">{user.registrationNumber || user.registrationNo}</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeGroupUser(user.id)}
                         className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-                        aria-label={`Remove ${user.name}`}
+                        aria-label={`Remove ${user.username || user.name}`}
                       >
                         <X size={17} />
                       </button>
@@ -1434,11 +1549,12 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
         </div>
       )}
 
-      {activeSection === "dashboard" && renderDashboard()}
-      {activeSection === "notes" && renderNotes()}
-      {activeSection === "add" && renderAddNote()}
-      {activeSection === "groups" && renderGroups()}
-      {activeSection === "subjects" && renderSubjects()}
+      {activeSection === "dashboard" && <DashboardView>{renderDashboard()}</DashboardView>}
+      {activeSection === "notes" && <NotesView>{renderNotes()}</NotesView>}
+      {activeSection === "add" && <AddNoteDialog>{renderAddNote()}</AddNoteDialog>}
+      {activeSection === "groups" && <GroupsView>{renderGroups()}</GroupsView>}
+      {activeSection === "subjects" && <SubjectsView>{renderSubjects()}</SubjectsView>}
+      {activeSection === "folders" && <FoldersView>{renderNotes()}</FoldersView>}
       {activeSection === "settings" && (
         <div>
           <PageHeader title="Settings" description="Account settings will be added later" />

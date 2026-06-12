@@ -4,13 +4,14 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
-import { apiFetch } from "../../lib/apiClient";
+import { login, register } from "./auth.api";
 
 const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
+    registrationNumber: "",
     password: "",
     confirmPassword: "",
   });
@@ -34,14 +35,16 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
     }
 
     try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const data = await apiFetch(endpoint, {
-        method: "POST",
-        body: {
+      const data = isLogin
+        ? await login({
           username: formData.username.trim(),
           password: formData.password,
-        },
-      });
+        })
+        : await register({
+          username: formData.username.trim(),
+          registrationNumber: formData.registrationNumber.trim(),
+          password: formData.password,
+        });
 
       if (data?.token && data?.userId) {
         localStorage.setItem("token", data.token);
@@ -154,17 +157,31 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               </label>
 
               {!isLogin && (
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold">Confirm password</span>
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    placeholder="Repeat your password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                  />
-                </label>
+                <>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-semibold">Registration number</span>
+                    <Input
+                      type="text"
+                      name="registrationNumber"
+                      placeholder="Enter your registration number"
+                      value={formData.registrationNumber}
+                      onChange={handleChange}
+                      required
+                    />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-semibold">Confirm password</span>
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      placeholder="Repeat your password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                    />
+                  </label>
+                </>
               )}
 
               <Button type="submit" disabled={isLoading} className="w-full" size="lg">
@@ -186,7 +203,7 @@ const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
               onClick={() => {
                 setIsLogin((prev) => !prev);
                 setError("");
-                setFormData({ username: "", password: "", confirmPassword: "" });
+                setFormData({ username: "", registrationNumber: "", password: "", confirmPassword: "" });
               }}
               className="font-semibold text-primary hover:underline"
             >

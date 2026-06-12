@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Textarea } from "../../components/ui/Textarea";
-import { apiFetch } from "../../lib/apiClient";
+import { deleteFolder, updateFolder } from "../folders/folders.api";
 
 const formatDate = (value) => {
   if (!value) return "Recently added";
@@ -34,17 +34,22 @@ const NoteCard = ({ note, onNoteUpdate, onNoteDelete }) => {
 
   const handleUpdate = async () => {
     try {
-      const updatedNote = await apiFetch(`/notes/${note.id}`, {
-        method: "PUT",
-        body: {
-          title: editedNote.title,
-          content: editedNote.content,
-          userId: editedNote.userId,
-          tags: (selectedTags || []).map((tag) => tag.value),
-        },
+      const updatedFolder = await updateFolder(note.id, {
+        title: editedNote.title,
+        description: editedNote.content,
+        subjectId: note.subjectId || "",
+        semester: note.semester || "Semester 1",
+        category: note.category || "Lecture",
+        visibility: note.visibility || "private",
+        groupId: note.groupId || "",
       });
 
-      onNoteUpdate({ ...updatedNote, attachmentName: note.attachmentName });
+      onNoteUpdate({
+        ...note,
+        title: updatedFolder.title,
+        content: updatedFolder.description || "",
+        attachmentName: note.attachmentName,
+      });
       setIsEditing(false);
       setError("");
     } catch (err) {
@@ -57,7 +62,7 @@ const NoteCard = ({ note, onNoteUpdate, onNoteDelete }) => {
     if (!window.confirm("Delete this note?")) return;
 
     try {
-      await apiFetch(`/notes/${note.id}`, { method: "DELETE" });
+      await deleteFolder(note.id);
       onNoteDelete(note.id);
     } catch (err) {
       setError(err.message || "Failed to delete note");

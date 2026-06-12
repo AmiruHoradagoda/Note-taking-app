@@ -3,36 +3,27 @@ import NavBar from "../components/layout/NavBar";
 import SideBar from "../components/layout/SideBar";
 import AuthForms from "../features/auth/AuthForms";
 import MainContent from "../features/workspace/MainContent";
-import { apiFetch, clearAuth, getUserId } from "../lib/apiClient";
+import { useAuth } from "../hooks/useAuth";
+import { apiFetch } from "../lib/apiClient";
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, markAuthenticated, logout } = useAuth();
   const [searchResults, setSearchResults] = useState(null);
   const [activeSection, setActiveSection] = useState("dashboard");
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) setIsAuthenticated(true);
-  }, []);
-
 
   useEffect(() => {
     const openAddNote = () => setActiveSection("add");
     window.addEventListener("leckeeper:navigate-add", openAddNote);
     return () => window.removeEventListener("leckeeper:navigate-add", openAddNote);
   }, []);
-  const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
-  };
 
   const handleLogout = () => {
-    clearAuth();
+    logout();
     setSearchResults(null);
     setActiveSection("dashboard");
-    setIsAuthenticated(false);
   };
 
-  const handleSearch = async (userId, searchTxt) => {
+  const handleSearch = async (_userId, searchTxt) => {
     if (!searchTxt.trim()) {
       setSearchResults(null);
       return;
@@ -41,12 +32,13 @@ const App = () => {
     setActiveSection("notes");
 
     try {
-      const data = await apiFetch("/notes/search", {
+      const response = await apiFetch("/search", {
         params: {
-          userId: userId || getUserId(),
-          searchTxt,
+          q: searchTxt,
+          scope: "all",
         },
       });
+      const data = response?.data ?? response;
       setSearchResults(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Search failed:", error);
@@ -57,8 +49,8 @@ const App = () => {
   if (!isAuthenticated) {
     return (
       <AuthForms
-        onLoginSuccess={handleAuthSuccess}
-        onRegisterSuccess={handleAuthSuccess}
+        onLoginSuccess={markAuthenticated}
+        onRegisterSuccess={markAuthenticated}
       />
     );
   }

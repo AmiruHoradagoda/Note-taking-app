@@ -14,7 +14,7 @@ const NavBar = ({ onSearch }) => {
 
       try {
         const userData = await apiFetch(`/users/${userId}`);
-        setUser(userData);
+        setUser(userData?.data || userData);
       } catch (error) {
         console.error("Failed to fetch user data:", error);
       }

@@ -3,7 +3,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || "/api/v1").replace(
   ""
 );
 
-const getToken = () => localStorage.getItem("token");
+export const getToken = () => localStorage.getItem("token");
 
 export const getUserId = () => localStorage.getItem("userId");
 
@@ -51,14 +51,15 @@ const parseJson = async (response) => {
 
 export const apiFetch = async (path, options = {}) => {
   const { params, headers, body, ...rest } = options;
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
   const response = await fetch(buildApiUrl(path, params), {
     ...rest,
     headers: buildHeaders({
-      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
       Accept: "application/json",
       ...headers,
     }),
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   const data = await parseJson(response);
