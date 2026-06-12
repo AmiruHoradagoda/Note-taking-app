@@ -40,7 +40,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthenticationResponse register(RegisterRequest request) {
-        validateNewUser(request.getUsername(), request.getPassword());
+        validateNewUser(request.getUsername(), request.getPassword(), request.getRegistrationNumber());
 
         Users user = userMapper.toRegisterRequest(request);
         user.setPassword(encoder.encode(user.getPassword()));
@@ -50,6 +50,7 @@ public class UserServiceImpl implements UserService {
         return AuthenticationResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
+                .registrationNumber(user.getRegistrationNumber())
                 .token(token)
                 .message("User registered successfully")
                 .build();
@@ -65,6 +66,7 @@ public class UserServiceImpl implements UserService {
 
         Users user = new Users();
         user.setUsername(username);
+        user.setRegistrationNumber("ADMIN-0001");
         user.setPassword(encoder.encode("amiru@123"));
 
         repo.save(user);
@@ -93,6 +95,7 @@ public class UserServiceImpl implements UserService {
             return AuthenticationResponse.builder()
                     .userId(authenticatedUser.getId())
                     .username(user.getUsername())
+                    .registrationNumber(authenticatedUser.getRegistrationNumber())
                     .token(token)
                     .message("Login successful")
                     .build();
@@ -121,7 +124,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDto createUser(Users user) {
-        validateNewUser(user.getUsername(), user.getPassword());
+        validateNewUser(user.getUsername(), user.getPassword(), user.getRegistrationNumber());
         user.setPassword(encoder.encode(user.getPassword()));
         Users savedUser = repo.save(user);
         return userMapper.toUserResponseDto(savedUser);
@@ -137,7 +140,16 @@ public class UserServiceImpl implements UserService {
             if (sameUsernameUser != null && !sameUsernameUser.getId().equals(id)) {
                 throw new IllegalArgumentException("Username is already taken");
             }
-            existingUser.setUsername(user.getUsername());
+            existingUser.setUsername(user.getUsername().trim());
+        }
+
+        if (user.getRegistrationNumber() != null && !user.getRegistrationNumber().isBlank()) {
+            String registrationNumber = user.getRegistrationNumber().trim();
+            Users sameRegistrationUser = repo.findByRegistrationNumber(registrationNumber);
+            if (sameRegistrationUser != null && !sameRegistrationUser.getId().equals(id)) {
+                throw new IllegalArgumentException("Registration number is already taken");
+            }
+            existingUser.setRegistrationNumber(registrationNumber);
         }
 
         if (user.getPassword() != null && !user.getPassword().isBlank()) {
@@ -156,15 +168,19 @@ public class UserServiceImpl implements UserService {
         repo.deleteById(id);
     }
 
-    private void validateNewUser(String username, String password) {
+    private void validateNewUser(String username, String password, String registrationNumber) {
         if (username == null || username.isBlank()) {
             throw new IllegalArgumentException("Username is required");
         }
         if (password == null || password.isBlank()) {
             throw new IllegalArgumentException("Password is required");
         }
-        if (repo.findByUsername(username) != null) {
+        if (repo.findByUsername(username.trim()) != null) {
             throw new IllegalArgumentException("Username is already taken");
+        }
+        if (registrationNumber != null && !registrationNumber.isBlank()
+                && repo.findByRegistrationNumber(registrationNumber.trim()) != null) {
+            throw new IllegalArgumentException("Registration number is already taken");
         }
     }
 

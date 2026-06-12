@@ -13,5 +13,6 @@ public class AuthenticationResponse {
     private String token;
     private String userId;
     private String username;
+    private String registrationNumber;
     private String message;
 }

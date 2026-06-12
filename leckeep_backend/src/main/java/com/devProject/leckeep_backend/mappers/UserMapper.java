@@ -16,6 +16,7 @@ public class UserMapper {
         return UserResponseDto.builder()
                 .id(users.getId())
                 .username(users.getUsername())
+                .registrationNumber(users.getRegistrationNumber())
                 .build();
     }
 
@@ -26,6 +27,7 @@ public class UserMapper {
 
         return Users.builder()
                 .username(request.getUsername())
+                .registrationNumber(request.getRegistrationNumber())
                 .password(request.getPassword())
                 .build();
     }
