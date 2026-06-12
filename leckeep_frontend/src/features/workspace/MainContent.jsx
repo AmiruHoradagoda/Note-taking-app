@@ -36,7 +36,8 @@ import { createSubject, deleteSubject, getSubjects } from "../subjects/subjects.
 import SubjectsView from "../subjects/SubjectsView";
 import { createFolder, deleteFolder, getFolders, updateFolder } from "../folders/folders.api";
 import FoldersView from "../folders/FoldersView";
-import { getFolderDocuments, uploadDocument } from "../documents/documents.api";
+import DocumentPreviewDialog from "../documents/DocumentPreviewDialog";
+import { getDocumentDownloadUrl, getFolderDocuments, previewDocument, uploadDocument } from "../documents/documents.api";
 import AddNoteDialog from "../notes/AddNoteDialog";
 import NotesView from "../notes/NotesView";
 import { allowedDocumentExtensions, documentAccept } from "../notes/notes.constants";
@@ -178,6 +179,10 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
   const [subjectSemesterFilter, setSubjectSemesterFilter] = useState("all");
   const [activeNoteScope, setActiveNoteScope] = useState("private");
   const [selectedNote, setSelectedNote] = useState(null);
+  const [previewDocumentFile, setPreviewDocumentFile] = useState(null);
+  const [documentPreview, setDocumentPreview] = useState(null);
+  const [documentPreviewLoading, setDocumentPreviewLoading] = useState(false);
+  const [documentPreviewError, setDocumentPreviewError] = useState("");
   const [shareNote, setShareNote] = useState(null);
   const [shareTarget, setShareTarget] = useState("global");
   const [shareGroupId, setShareGroupId] = useState("");
@@ -564,6 +569,34 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
       setError("");
     } catch (err) {
       setError(err.message || "Failed to delete folder");
+    }
+  };
+
+  const closeDocumentPreview = () => {
+    setPreviewDocumentFile(null);
+    setDocumentPreview(null);
+    setDocumentPreviewError("");
+    setDocumentPreviewLoading(false);
+  };
+
+  const openDocumentPreview = async (document) => {
+    setPreviewDocumentFile(document);
+    setDocumentPreview(null);
+    setDocumentPreviewError("");
+
+    if (!document?.id) {
+      setDocumentPreviewError("Preview is available only for uploaded backend documents.");
+      return;
+    }
+
+    setDocumentPreviewLoading(true);
+    try {
+      const preview = await previewDocument(document.id);
+      setDocumentPreview(preview);
+    } catch (err) {
+      setDocumentPreviewError(err.message || "Failed to load document preview");
+    } finally {
+      setDocumentPreviewLoading(false);
     }
   };
 
@@ -1046,14 +1079,18 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
     );
   };
 
-  const renderResourceTile = ({ icon, title, date }) => (
-    <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-border bg-white p-4 text-center shadow-sm">
+  const renderResourceTile = ({ icon, title, date, onClick }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-border bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <div className="mb-4 flex h-14 w-14 items-center justify-center">
         {icon}
       </div>
       <h4 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5">{title}</h4>
       <p className="mt-3 text-xs text-muted-foreground">{date}</p>
-    </div>
+    </button>
   );
 
   const renderShareDialog = () => {
@@ -1175,6 +1212,7 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
                     icon: getDocumentIcon(document, 42),
                     title: displayFileName(document),
                     date: formatDate(note.createdAt),
+                    onClick: () => openDocumentPreview(document),
                   }))}
                 </div>
               ) : (
@@ -1548,6 +1586,15 @@ const MainContent = ({ activeSection = "subjects", searchResults }) => {
           {error}
         </div>
       )}
+
+      <DocumentPreviewDialog
+        document={previewDocumentFile}
+        preview={documentPreview}
+        downloadUrl={previewDocumentFile?.id ? getDocumentDownloadUrl(previewDocumentFile.id) : ""}
+        loading={documentPreviewLoading}
+        error={documentPreviewError}
+        onClose={closeDocumentPreview}
+      />
 
       {activeSection === "dashboard" && <DashboardView>{renderDashboard()}</DashboardView>}
       {activeSection === "notes" && <NotesView>{renderNotes()}</NotesView>}
