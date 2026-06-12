@@ -5,7 +5,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import com.devProject.leckeep_backend.service.document.DocumentService;
 import com.devProject.leckeep_backend.utils.StandardResponseDto;
@@ -19,9 +22,12 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
-    @PostMapping("/folders/{folderId}/documents")
-    public StandardResponseDto uploadDocument(@PathVariable String folderId) {
-        return new StandardResponseDto(200, "Document upload action completed", documentService.uploadDocument(folderId));
+    @PostMapping(value = "/folders/{folderId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public StandardResponseDto uploadDocument(
+            @PathVariable String folderId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return new StandardResponseDto(200, "Document uploaded", documentService.uploadDocument(folderId, file));
     }
 
     @GetMapping("/folders/{folderId}/documents")

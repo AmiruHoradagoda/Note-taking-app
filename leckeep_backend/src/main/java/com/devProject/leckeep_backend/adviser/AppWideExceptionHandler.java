@@ -43,4 +43,20 @@ public class AppWideExceptionHandler {
         );
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<StandardResponseDto> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return new ResponseEntity<StandardResponseDto>(
+                new StandardResponseDto(400, ex.getMessage(), ex),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<StandardResponseDto> handleSecurityException(SecurityException ex) {
+        return new ResponseEntity<StandardResponseDto>(
+                new StandardResponseDto(403, ex.getMessage(), ex),
+                HttpStatus.FORBIDDEN
+        );
+    }
+
 }

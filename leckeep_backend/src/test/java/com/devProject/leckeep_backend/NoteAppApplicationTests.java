@@ -11,6 +11,8 @@ import com.devProject.leckeep_backend.repository.NoteFolderRepository;
 import com.devProject.leckeep_backend.repository.StudyGroupRepository;
 import com.devProject.leckeep_backend.repository.SubjectRepository;
 import com.devProject.leckeep_backend.repository.UserRepository;
+import com.devProject.leckeep_backend.service.document.storage.ObjectStorageService;
+import io.minio.MinioClient;
 
 @SpringBootTest(properties = {
 		"spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration,org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration"
@@ -37,6 +39,12 @@ class NoteAppApplicationTests {
 
 	@MockBean
 	private FolderShareRepository folderShareRepository;
+
+	@MockBean
+	private ObjectStorageService objectStorageService;
+
+	@MockBean
+	private MinioClient minioClient;
 
 	@Test
 	void contextLoads() {
