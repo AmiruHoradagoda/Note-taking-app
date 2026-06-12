@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, Search } from "lucide-react";
-import { Input } from "./ui/Input";
-import { apiFetch, getUserId } from "../utils/api";
+import { Input } from "../ui/Input";
+import { apiFetch, getUserId } from "../../lib/apiClient";
 
 const NavBar = ({ onSearch }) => {
   const [user, setUser] = useState(null);

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { BookOpen, Eye, EyeOff, FileText, Lock, User } from "lucide-react";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { Input } from "../components/ui/Input";
-import { Badge } from "../components/ui/Badge";
-import { apiFetch } from "../utils/api";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { apiFetch } from "../../lib/apiClient";
 
 const AuthForms = ({ onLoginSuccess, onRegisterSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);

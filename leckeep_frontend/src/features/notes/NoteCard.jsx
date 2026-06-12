@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Calendar, FileText, Pencil, Save, Tag, Trash2, X } from "lucide-react";
 import CreatableReactSelect from "react-select/creatable";
-import { Badge } from "./ui/Badge";
-import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
-import { Input } from "./ui/Input";
-import { Textarea } from "./ui/Textarea";
-import { apiFetch } from "../utils/api";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { Textarea } from "../../components/ui/Textarea";
+import { apiFetch } from "../../lib/apiClient";
 
 const formatDate = (value) => {
   if (!value) return "Recently added";
@@ -19,7 +19,7 @@ const formatDate = (value) => {
   });
 };
 
-const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
+const NoteCard = ({ note, onNoteUpdate, onNoteDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedNote, setEditedNote] = useState(note);
   const [error, setError] = useState("");
@@ -177,4 +177,4 @@ const NoteComponent = ({ note, onNoteUpdate, onNoteDelete }) => {
   );
 };
 
-export default NoteComponent;
+export default NoteCard;

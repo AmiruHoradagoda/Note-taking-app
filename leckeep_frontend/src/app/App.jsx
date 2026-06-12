@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import NavBar from "./components/NavBar";
-import SideBar from "./components/SideBar";
-import MainContent from "./pages/MainContent";
-import AuthForms from "./pages/AuthForms";
-import { apiFetch, clearAuth, getUserId } from "./utils/api";
+import NavBar from "../components/layout/NavBar";
+import SideBar from "../components/layout/SideBar";
+import AuthForms from "../features/auth/AuthForms";
+import MainContent from "../features/workspace/MainContent";
+import { apiFetch, clearAuth, getUserId } from "../lib/apiClient";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
